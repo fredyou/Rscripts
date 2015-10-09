@@ -1,0 +1,678 @@
+
+OO field Guide
+```{r OO field guide}
+library(pryr)
+#############
+##base types#
+#############
+is.object(sum) #False
+
+############
+##s3 class##
+############
+
+#In S3, methods belong to functions, called generic functions, or generics for short. S3 methods do not belong to objects or classes. 
+functiontype=function (f) 
+{
+    fexpr <- substitute(f)
+    env <- parent.frame()
+    fname <- if (is.name(fexpr)) 
+        as.character(fexpr)
+    else NULL
+    if (is.primitive(f)) {
+        c("primitive", if (is_internal_generic(primitive_name(f))) "generic")
+    }
+    else if (is_internal(f)) {
+        c("internal", if (is_internal_generic(internal_name(f))) "generic")
+    }
+    else if (is(f, "standardGeneric")) {
+        c("s4", "generic")
+    }
+    else if (is(f, "MethodDefinition")) {
+        c("s4", "method")
+    }
+    else if (is(f, "refMethodDef")) {
+        c("rc", "method")
+    }
+    else if (!is.null(fname) && is_s3_generic(fname, env)) {
+        c("s3", "generic")
+    }
+    else if (!is.null(fname) && is_s3_method(fname, env)) {
+        c("s3", "method")
+    }
+    else {
+        c("function")
+    }
+}
+
+##check S3 methods##
+#check methods belong to a generic method in base package
+methods(mean)
+#list all generic methods of a given class:
+methods(class="ts") #ts is an object in stats pacakge
+#get source code of s3 method defined in packages other than base package
+getS3method()
+#Note!! is.Generic() is used only for S4 method
+
+##create S3 class##
+foo=structure(list(),class="foo")
+class(foo)
+inherits(foo,"foo")
+
+#constructor function
+foo <- function(x) {
+  if (!is.numeric(x)) stop("X must be numeric")
+  structure(list(x), class = "foo")
+}
+
+#generic function assign
+f.a=function(x) "Class a"
+a=structure(list(),class="a")
+
+#Method dispatch
+f <- function(x) UseMethod("f") 
+#without this,method wouldnt be dispatched 
+# UseMethod currently dispatches on the implicit class even for arguments that are not objects(base type), but the other means of dispatch do not.
+f.a <- function(x) "Class a"
+f.default <- function(x) "Unknown class"
+
+##Group generics
+?"groupGeneric"
+#group generics dispatch on the oldClass not class for efficiency
+#oldclass return and set class but are implemented in a diff way
+#If the object does not have a class attribute, it has an implicit class, "matrix", "array" or the result of mode(x). (Functions oldClass and oldClass<- get and set the attribute, which can also be done directly.
+
+##NextMethod
+?NextMethod
+
+
+#force R to call the wrong method
+f.default(a) #this is only used to skip method dispatch
+iclass <- function(x) {
+  if (is.object(x)) {
+    stop("x is not a primitive type", call. = FALSE)
+  }
+
+  c(
+    if (is.matrix(x)) "matrix",
+    if (is.array(x) && !is.matrix(x)) "array",
+    if (is.double(x)) "double",
+    if (is.integer(x)) "integer",
+    mode(x)
+  )
+}
+iclass(matrix(1:5))
+#Here matrix is a non-S3 obj
+
+####Excercise:
+#4.Which base generic has the greatest number of defined methods?
+baseobj=ls(envir = as.environment("package:base"))
+baseobj=Filter(function(f){is.function(get(f))},baseobj)
+checkgeneric=function(f){
+  type=""
+  #print(f)
+  if(f=="F") return(NULL);
+  if (pryr:::is_s3_generic(f)) {
+       type= c("generic")
+    }
+    else if (pryr:::is_s3_method(f)) {
+       type= c("method")
+    }
+  grepl("generic",type)
+}
+genericFuncs=Filter(checkgeneric,baseobj)
+methodcount=sapply(genericFuncs,function(x){length(methods(x))})
+which(methodcount==max(methodcount))
+
+#6Internal generics don¡¯t dispatch on the implicit class of base types. 
+#so functions with no $class attribute will not be dispatched internal methods
+
+############
+##s4 class##
+############
+# Methods still belong to functions, not classes, but:
+# 
+# Classes have formal definitions which describe their fields and inheritance structures (parent classes).
+# 
+# Method dispatch can be based on multiple arguments to a generic function, not just one.
+# 
+# There is a special operator, @, for extracting slots (aka fields) from an S4 object.
+
+# All S4 related code is stored in the methods package. This package is always available when you¡¯re running R interactively, but may not be available when running R in batch mode. For this reason, it¡¯s a good idea to include an explicit library(methods) whenever you¡¯re using S4.
+
+
+y <- c(26, 17, 13, 12, 20, 5, 9, 8, 5, 4, 8)
+nLL <- function(lambda) - sum(dpois(y, lambda, log = TRUE))
+fit <- mle(nLL, start = list(lambda = 5), nobs = length(y))
+# Retrieve an S4 method, described later
+ftype(nobs)
+mle_nobs <- method_from_call(nobs(fit))
+isS4(mle_nobs)
+#> [1] TRUE
+ftype(mle_nobs)
+#> [1] "s4"     "method"
+
+#nobs is the generic S4 func, nobs(fit) call method that belong to nobs.
+
+##Check inheritance###
+is(fit) #show parent classes
+is(fit,"mle") #test inheritances
+
+##check source code
+showmethods(nobs) #object="ANY" means input not specified
+getMethod(nobs,signature="ANY")
+getMethod(nobs,signature="mle")
+
+##list all S4 generics and S4 classes
+getGenerics();getClasses();
+##list all S4 methods
+#showMethods(),by generics or by class, where=search() :globalEnv
+
+###Define classes and create objs####
+#define representation of class:
+setClass()
+#create obj
+new()
+# find the documentation for a class 
+class?mle
+#class name convention:
+UpperCamelCase
+
+###Three elements in S4:name, slots, contains: super
+setClass("Person",
+  slots = list(name = "character", age = "numeric"))
+setClass("Employee",
+  slots = list(boss = "Person"),
+  contains = "Person")
+
+alice <- new("Person", name = "Alice", age = 40)
+john <- new("Employee", name = "John", age = 20, boss = alice)
+#new() could be replaced with a constructor func
+
+###If an S4 object contains (inherits from) an S3 class or a base type, it will have a special .Data slot which contains the underlying base type or S3 object:
+setClass("RangedNumeric",
+  contains = "numeric",
+  slots = list(min = "numeric", max = "numeric"))
+rn <- new("RangedNumeric",  min = 1, max = 10,1:10)
+rn@min
+rn@.Data
+
+###Create or set function to be generic
+#if there is function already
+setGeneric("union")
+setMethod("union",c(x="data.frame",y="data.frame"),function(x,y){unique(rbind(x,y))}) 
+#generic name, classes the method shall be associated with, a func implements the method
+
+#if create generic from scratch:
+setGeneric("myGeneric", function(x) {
+  standardGeneric("myGeneric")
+})
+
+###Method dispatch
+selectMethod("nobs",list("mle"))  
+#similar to getMethod(genericname,signature)
+method_from_call(nobs(fit))
+
+
+###Initialize Method
+track <- setClass("track",
+         slots = c(x="numeric", y="numeric"))
+trackCurve <- setClass("trackCurve",
+    slots = c(smooth = "numeric"),
+    contains = "track")
+
+setMethod("initialize",
+          "track",
+          function(.Object, x = numeric(0), y = numeric(0)) {
+            if(nargs() > 1) {
+              if(length(x) != length(y))
+                stop("specified x and y of different lengths")
+              .Object@x <- x
+              .Object@y <- y
+            }
+            .Object
+          })
+#above initialize func will apply to both track and trackCurve so:
+t1 <- track(x = 1:10, y = 1:10 + rnorm(10))
+t2 <- new("trackCurve", t1, smooth = 22) #WOULD NOT WORK!!
+
+#Better init in this way
+setMethod("initialize", "track", function(.Object, ...) {
+    .Object <- callNextMethod()
+    if(length(.Object@x) != length(.Object@y))
+     stop("specified x and y of different lengths")
+    .Object
+  })
+t1 <- track(x = 1:10, y = 1:10 + rnorm(10))
+t2 <- new("trackCurve", t1, smooth = 22) #WORKED
+
+
+###callNextMethod###
+#call parents` methods until to generic function
+setClass("B0" , representation(b0 = "numeric"))
+
+setClass("B1", representation(b1 = "character"), contains = "B0")
+
+setClass("B2", representation(b2 = "logical"), contains = "B1")
+
+## and a rather silly function to illustrate callNextMethod
+f <- function(x) class(x)
+setMethod("f", "B0", function(x) c(x@b0^2, callNextMethod()))
+setMethod("f", "B1", function(x) c(paste(x@b1,":"), callNextMethod()))
+setMethod("f", "B2", function(x) c(x@b2, callNextMethod()))
+b1 <- new("B1", b0 = 2, b1 = "Testing")
+b2 <- new("B2", b2 = FALSE, b1 = "More testing", b0 = 10)
+f(b1)
+#Here f function has methods for "ANY","B0"...,
+#callNextMethod would call f.B1->f.B0->f.ANY
+
+###replacement function# change the value without copy
+setClass("foo", representation(a = "ANY"))
+setGeneric("a",  function(object) standardGeneric("a"))
+setMethod("a", "foo", function(object) object@a)
+b <- new("foo", a = 10)
+a(b)
+#a(b)=12: Error couldnt find function a<-
+
+#lets build generic replace func
+setGeneric("a<-", function(x, value) standardGeneric("a<-"))
+setReplaceMethod("a", "foo", function(x, value) {
+  x@a<-value
+  x
+})
+a(b)=32
+#however, this b has different address now
+
+###Exercise1 Which S4 generic has the most methods defined for it? Which S4 class has the most methods associated with it?
+s4genericglobal=Filter(function(f){if(exists(f)){isS4(get(f))}else F},getGenerics()@.Data) #filter out s4 generics
+count=sapply(
+  s4genericglobal,
+  function(x){ length(findMethods(x)@signatures)})
+which(count==max(count)) #coerce 8
+
+s4classesglobal=Filter(function(f){isS4(getClass(f,where=search()))},getClasses(where=search()))
+count=sapply(
+  s4classesglobal,
+  function(x){ length(showMethods(class=x,printTo=F)[ grep("Function",showMethods(class="RangedNumeric", printTo =FALSE ))])})
+which(count==max(count)) 
+
+###Exercise2 What happens if you define a new S4 class that doesn¡¯t ¡°contain¡± an existing class? (Hint: read about virtual classes in ?Classes.)
+setClass("Person") OR #setClass("Person",slots...,contains="VIRTUAL")
+#cannot use new() to create objects but could be extended by subclass
+
+###Exercise3 What happens if you pass an S4 object to an S3 generic? What happens if you pass an S3 object to an S4 generic? (Hint: read ?setOldClass for the second case.)
+#s3 class
+stamped <- function(x, date = Sys.time()) {
+    if(!inherits(date, "POSIXt"))
+      stop("bad date argument")
+    if(!is.vector(x))
+      stop("x must be a vector")
+    attr(x, "date") <- date
+    class(x) <- "stamped"
+    x
+}
+
+print.stamped <- function(x, ...) {
+    print(as.vector(x))
+    cat("Date: ",  format(attr(x,"date")), "s3print\n")
+}
+test=function(x,...){
+  UseMethod("test")
+}
+# test.vector=function(x){
+#   print("This is test.vector function for stamped s3 class")
+# }
+test.stamped=function(x){
+  print("This is the test.stamped function for stamped s3 class")
+}
+x=stamped("xxx")
+
+##Pass s4 to s3 generic (), but s4 must be a class converted from s3 by setOldClass(s3,S4Class=s4)
+
+setClass("stamped4", contains = "vector", representation(date = "POSIXt"))
+#This is the important part, stamped4 extends vector, then setOldClass make stamped extends stamped4
+#so when test function is called on s3 obj of stamped, it searches for 
+# setGeneric("test",function(object) {
+#   standardGeneric("test")
+# })
+
+#setOldClass("stamped", S4Class = "stamped4") #convert stamped to stamped4 that extends vector
+#And add oldclass to extends as well.
+#selectMethod("show", "stamped") #
+#selectMethod("test","stamped") #This will report an error, because s4 generic test havent been defined
+#But, you cannot setGeneric("test",...) cuz it will override s3 test function
+#What u could do is: setMethod("test","stamped4",function....) and then selectMethod, this will link #s4method to s3 method 
+#or just don`t add this command, and u would directly invoke s3 test
+removeClass("stamped4")
+someLetters <- stamped(sample(letters, 10),
+                       ISOdatetime(2008, 10, 15, 12, 0, 0))
+st <- new("stamped", someLetters)
+test(x) #s3 generic call s4 class
+
+##S4 generic call s3 obj
+x=stamped("xxx")
+setGeneric("test",function(object) {
+  standardGeneric("test")
+})
+setMethod("test","stamped4",function(object){print("This is test function for stamped4 s4 class")})
+#test(x) #Because test generic has been overriden, it returns an error
+setOldClass(c("stamped","stamped4"),S4Class="stamped4") 
+#connect stamped with S3Class(stamped4) and then stamped, S3Class(stamped4) extends stamped4
+#
+
+selectMethod("test", "stamped")
+test(x) #now stamped is also a s4 class
+#setOldClass("stamped", S4Class = "stamped4") #this along dont extend stamped4 but oldclas
+###Good Example of S4 OOP: Model bank and cashpoints: Basetra/programming/prediction.R
+
+
+###################
+##Reference class##
+###################
+###Exercise1
+Account <- setRefClass("Account",
+  fields = list(.balance = "numeric"),
+  methods = list(
+    withdraw = function(x) {
+      temp=.balance-x
+      print(temp)
+      return(Account$new(.balance=temp)) 
+    },
+    deposit = function(x) {
+      .balance <<- .balance + x
+    },
+    getBalance=function(){
+      return(.balance)
+    }
+    
+  )
+)
+Account$lock(".balance")
+a=Account$new(.balance=100)
+
+NoOverdraft <- setRefClass("NoOverdraft",
+  contains = "Account",
+  methods = list(
+    withdraw = function(x) {
+      if (.balance < x) stop("Not enough money")
+      .balance <<- .balance - x
+    }
+  )
+)
+accountJohn <- NoOverdraft$new(.balance = 100)
+
+
+```
+
+Chapter 8 Environments
+```{r chapter 8 environments}
+#Exercise2 Write your own version of get() using a function written in the style of where().
+get=function(name,env=parent.frame()){
+  stopifnot(class(name)=="character")
+  while(!identical(env,emptyenv())){
+    #print(env)
+    if(exists(name,env,inherits = FALSE)){return(env[[name]])}
+    env=parent.env(env)
+  }
+}
+e=new.env(parent=parent.frame())
+e$name="This is for test get func"
+attach(e) #IMPORTANT STEP, otherwise, look up procedure will not find "e"
+##Or new.env(parent = emptyenv())
+get("name")
+parent.env(.GlobalEnv) #e
+
+
+###four environments: enclosing env, binding env, execution env, calling env
+#Exercise5 Write an enhanced version of str() that provides more information about functions. Show where the function was found and what environment it was defined in.
+f1 <- function(x1) {
+  f2 <- function(x2) {
+    f3 <- function(x3) {
+      x1 + x2 + x3
+    }
+    f3(3)
+  }
+  f2(2)
+  
+}
+plus <- function(x) {
+  function(y) x + y
+}
+plus_one <- plus(1)
+identical(parent.env(environment(plus_one)), environment(plus))
+
+
+pryrfunccall=function (f) 
+{
+    if (is.function(f)) {
+        fun_calls(body(f))
+    }
+    else if (is.call(f)) {
+        fname <- as.character(f[[1]])
+        if (identical(fname, ".Internal")) 
+            return(fname)
+        unique(c(fname, unlist(lapply(f[-1], fun_calls), use.names = FALSE)))
+    }
+}
+
+#####IMPORTANT!!!!! HOW TO CONVERT ENVIRONMENT TO STRING:
+e=new.env()
+#cat(e)#error
+format(e) #character
+####MANY OBJECT IS ACTUALLY FORMATED BEFORE INVOKING PRINT FUNCTION
+
+?sys.frame
+attach(e)
+e$f2=f1
+str.function=function(f){
+  require(pryr)
+  cat("Found in(enclosing env): ",format(environment(f)),"\n");
+  cat("Defined in: ", format(where(as.character(substitute(f))))," Named: ",attr(where(as.character(substitute(f))),"name"))
+  #str(f)
+}
+
+######################
+##Bindings to values##
+######################
+###Delayed bindings
+library(pryr)
+system.time(b %<d-% {Sys.sleep(1); 1})
+system.time(b)
+
+##Active bindings
+x %<a-% runif(1)
+x
+x #different
+
+###Rebind
+rebind <- function(name, value, env = parent.frame()) {
+  if (identical(env, emptyenv())) {
+    stop("Can't find ", name, call. = FALSE)
+  } else if (exists(name, envir = env, inherits = FALSE)) {
+    assign(name, value, envir = env)
+  } else {
+    rebind(name, value, parent.env(env))
+  }
+}
+
+#compared with <<-, it rebinds name with variables of current calling environments,not parent.env
+
+myassign<-function(name,value){
+  require(pryr)
+  flag=format(tryCatch({where(name)},error=function(e){return("Error")}))
+  stopifnot(flag=="Error")
+  assign(name,value)
+}#if old name, assign break
+
+
+##?? Exercise3: Write an assignment function that can do active, delayed, and locked bindings. What might you call it? What arguments should it take? Can you guess which sort of assignment it should do based on the input? 
+
+
+###############################
+##reference semantics of env###
+###############################
+modify <- function(x) {
+  x$a <- 2
+  invisible()
+}
+x <- 1
+e1 <- new.env()
+get("x", envir = e1)
+
+e2 <- new.env(parent = emptyenv())
+get("x", envir = e2) #error
+
+# Environments are data structures useful for solving three common problems:
+# 
+# Avoiding copies of large data. #But Changes to R 3.1.0 have made this use substantially less important because modifying a list no longer makes a deep copy.
+# Managing state within a package.
+# Efficiently looking up values from names.
+```
+
+Debugging, condition handling, and defensive programming
+```{r Debug}
+##bug code
+f <- function(a) g(a)
+g <- function(b) h(b)
+h <- function(c) i(c)
+i <- function(d) "a" + d
+f(10)
+
+
+browseOnce <- function() {
+  old <- getOption("error")
+  function() {
+    options(error = old) #set options(error to null)
+    browser() #but still execute browser() once
+  }
+}
+options(error = browseOnce())
+
+f <- function() stop("!")
+# Enters browser
+f()
+# Runs normally
+f()
+
+
+###Convert warnings to errors
+ options(warn = 2)
+ 
+success <- try(1 + 2)
+failure <- try("a" + "b")
+class(success)
+#> [1] "numeric"
+class(failure)
+#> [1] "try-error"
+
+###tryCatch implement try
+try2 <- function(code, silent = FALSE) {
+  tryCatch(code, error = function(c) {
+    msg <- conditionMessage(c)
+    if (!silent) message(c)
+    invisible(structure(msg, class = "try-error")) #IMPORTANT~~ create a string with class
+  })
+}
+
+##interrupt
+i <- 1
+while(i < 3) {
+  tryCatch({
+    Sys.sleep(0.5)
+    message("Try to escape")
+  }, interrupt = function(x) {
+    message("Try again!")
+    i <<- i + 1
+  })
+}
+
+###sys.calls() :runtime traceback()
+f <- function() g()
+g <- function() h()
+h <- function() stop("!")
+tryCatch(f(), error = function(e) print(sys.calls()))
+
+
+####Distinguish different types of error####
+# Conditions must contain message and call components, and may contain other useful components. When creating a new condition, it should always inherit from condition and one of error, warning, or message.
+
+condition <- function(subclass, message, call = sys.call(-1), ...) {
+  structure(
+    class = c(subclass, "condition"),
+    list(message = message, call = call),
+    ...
+  )
+}
+is.condition <- function(x) inherits(x, "condition")
+c <- condition(c("my_error", "error"), "This is an error")
+
+
+custom_stop <- function(subclass, message, call = sys.call(-1), 
+                        ...) {
+  c <- condition(c(subclass, "error"), message, call = call, ...)
+  stop(c)
+}
+
+my_log <- function(x) {
+  if (!is.numeric(x))
+    custom_stop("invalid_class", "my_log() needs numeric input")
+  if (any(x < 0))
+    custom_stop("invalid_value", "my_log() needs positive inputs")
+
+  log(x)
+}
+
+##Or
+my_log <- function(x) {
+  if (!is.numeric(x))
+    c <- condition(c("invalid_class","error"), "my_log() needs numeric input")
+    signalCondition(c) #This is important step to let tryCatch really catch the signal
+  if (any(x < 0))
+    c <- condition(c("invalid_value","error"), "my_log() needs positive input")
+    signalCondition(c) #This is important step to let tryCatch really catch the signal
+
+  log(x)
+}
+
+tryCatch(
+  my_log("a"),
+  invalid_class = function(c) "class",
+  invalid_value = function(c) "value"
+)
+#this will first trigger the if stat in my_log, invoke custom_stop invalid_class and generate c condition
+
+###Exercise: Difference between withCallingHandlers and tryCatch
+message2error <- function(code) {
+  withCallingHandlers(code, message = function(e) stop(e))
+}
+message2error("a"+1)
+traceback() #Trace stoped at withCallingHandlers (it don`t return anything)
+message2error <- function(code) {
+  tryCatch(code, message = function(e) stop(e))
+}
+message2error("a"+1)
+traceback() #traced back to steps in tryCatch
+
+################################
+###Defensive programming########
+################################
+## "Fail fast"
+## Non-standard evaluation like subset, transform, and with often fail with uninformative error messages
+## if your function is not vectorised in its inputs, but uses functions that are, make sure to check that the inputs are scalars. 
+## Avoid functions that return different types of output depending on their input. 
+##  never use sapply() inside a function: always use the stricter vapply() which will throw an error if the inputs are incorrect types and return the correct type of output even for zero-length inputs.
+# vapply returns a vector or array of type matching the FUN.VALUE.
+
+
+###Exercise : 
+col_means <- function(df) {
+  numeric <- sapply(df, is.numeric)
+  numeric_cols <- df[, numeric]
+
+  data.frame(lapply(numeric_cols, mean))
+}
+
+
+```
+
+
