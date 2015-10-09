@@ -672,7 +672,102 @@ col_means <- function(df) {
   data.frame(lapply(numeric_cols, mean))
 }
 
+```
+
+Functional Programming
+```{r functional programming}
+######################
+##list of functnion###
+######################
+compute_mean <- list(
+  base = function(x) mean(x),
+  sum = function(x) sum(x) / length(x),
+  manual = function(x) {
+    total <- 0
+    n <- length(x)
+    for (i in seq_along(x)) {
+      total <- total + x[i] / n
+    }
+    total
+  }
+)
+lapply(compute_mean, function(f) f(x))
+#> $base
+#> [1] 0.4994771
+#> 
+#> $sum
+#> [1] 0.4994771
+#> 
+#> $manual
+#> [1] 0.4994771
+
+call_fun <- function(f, ...) f(...)
+
+lapply(compute_mean, call_fun, x)
+#> $base
+#> [1] 0.4994771
+#> 
+#> $sum
+#> [1] 0.4994771
+#> 
+#> $manual
+#> [1] 0.4994771
+lapply(compute_mean, function(f) system.time(f(x)))
+
+lapply(compute_mean, function(f) f(x, na.rm = TRUE))
+
+######################################################
+##Moving lists of functions to the global environment#
+######################################################
+simple_tag <- function(tag) {
+  force(tag)
+  function(...) {
+    paste0("<", tag, ">", paste0(...), "</", tag, ">")
+  }
+}
+tags <- c("p", "b", "i")
+html <- lapply(setNames(tags, tags), simple_tag)
+# keeping them in a list makes code more verbose:
+html$p("This is ", html$b("bold"), " text.")
+
+####three options to eliminate the use of html$:
+#1.(recommended) for very temporary effect use with():
+with(html, p("This is ", b("bold"), " text."))
+
+#2. for longer effect use attach(), detach():
+attach(html)
+p("This is ", b("bold"), " text.")
+#> [1] "<p>This is <b>bold</b> text.</p>"
+detach(html)
+
+#3. list2env
+list2env(html, environment())
+#> <environment: R_GlobalEnv>
+p("This is ", b("bold"), " text.")
+#> [1] "<p>This is <b>bold</b> text.</p>"
+rm(list = names(html), envir = environment())
+
+##Exercise1. 
+mysummary=function(otype){
+  funclist=as.list(methods("summary"))
+  names(funclist)=gsub("summary.","",as.character(methods("summary")))
+  if(otype %in% names(funclist)){
+    function(x){
+      get(funclist[[otype]])(x)
+    }
+  }
+}
+
+#2.Which of the following commands is equivalent to with(x, f(z))?
+# x$f(x$z).
+# f(x$z).
+# x$f(z).
+# f(z).
+#A: It depends. f in the list x first look for z in x, if not found , look up to global 
+x=list(f=function(x){print(x)},z="haha")
+as.environment(x) #list could be a different env from global
 
 ```
+
 
 
