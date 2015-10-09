@@ -767,6 +767,139 @@ mysummary=function(otype){
 x=list(f=function(x){print(x)},z="haha")
 as.environment(x) #list could be a different env from global
 
+################
+###Case Study###
+################
+midpoint <- function(f, a, b) {
+  (b - a) * f((a + b) / 2) #矩形面积
+}
+
+trapezoid <- function(f, a, b) {
+  (b - a) / 2 * (f(a) + f(b)) #梯形面积
+}
+
+midpoint(sin, 0, pi)
+#> [1] 3.141593
+trapezoid(sin, 0, pi)
+#> [1] 1.923671e-16
+
+###Above shows the approximation of area is not accurate enough
+###So lets break up the range into smaller pieces
+### composite integration. I’ll implement it using two new functions:
+
+midpoint_composite <- function(f, a, b, n = 10) {
+  points <- seq(a, b, length = n + 1)
+  h <- (b - a) / n
+
+  area <- 0
+  for (i in seq_len(n)) {
+    area <- area + h * f((points[i] + points[i + 1]) / 2)
+  }
+  area
+}
+
+trapezoid_composite <- function(f, a, b, n = 10) {
+  points <- seq(a, b, length = n + 1)
+  h <- (b - a) / n
+
+  area <- 0
+  for (i in seq_len(n)) {
+    area <- area + h / 2 * (f(points[i]) + f(points[i + 1]))
+  }
+  area
+}
+
+midpoint_composite(sin, 0, pi, n = 10)
+#> [1] 2.008248
+midpoint_composite(sin, 0, pi, n = 100)
+#> [1] 2.000082
+trapezoid_composite(sin, 0, pi, n = 10)
+#> [1] 1.983524
+trapezoid_composite(sin, 0, pi, n = 100)
+
+####Now we see both functions are quite duplicated in code
+#the difference actually lie in the for loop where it calculates the area according to specific rule
+composite <- function(f, a, b, n = 10, rule) {
+  points <- seq(a, b, length = n + 1)
+
+  area <- 0
+  for (i in seq_len(n)) {
+    area <- area + rule(f, points[i], points[i + 1])
+    #Here rule is either function midpoint or trapezoid defined early at start.
+  }
+
+  area
+}
+
+###Since rules could be replaced, the integration allows trying different rules
+simpson <- function(f, a, b) {
+  (b - a) / 6 * (f(a) + 4 * f((a + b) / 2) + f(b))
+  ##(2*midpoint-rectangle+trapezoid)/3
+}
+
+boole <- function(f, a, b) {
+  pos <- function(i) a + i * (b - a) / 4
+  fi <- function(i) f(pos(i))
+
+  (b - a) / 90 *
+    (7 * fi(0) + 32 * fi(1) + 12 * fi(2) + 32 * fi(3) + 7 * fi(4))
+}
+
+
+###these rules are all childs of newton-cotes rules
+newton_cotes <- function(coef, open = FALSE) {
+  n <- length(coef) + open
+
+  function(f, a, b) {
+    pos <- function(i) a + i * (b - a) / n
+    points <- pos(seq.int(0, length(coef) - 1))
+
+    (b - a) / sum(coef) * sum(f(points) * coef)
+  }
+}
+
+boole <- newton_cotes(c(7, 32, 12, 32, 7))
+milne <- newton_cotes(c(2, -1, 2), open = TRUE)
+composite(sin, 0, pi, n = 10, rule = milne)
+
+rules=list(boole,milne,midpoint,trapezoid,simpson)
+#Exercise 2: The trade-off between integration rules is that more complex rules are slower to compute, but need fewer pieces. For sin() in the range [0, π], determine the number of pieces needed so that each rule will be equally accurate. Illustrate your results with a graph. How do they change for different functions? sin(1 / x^2) is particularly challenging.
+
+##PAY ATTENTION TO = , <- and -> they are different!!:
+snm=c("asdf","dsf","")
+any(nonames=sm=="");nonames;  # TRUE ; object 'nonames' not found
+any(nonames->sm=="");nonames; # object 'nonames' not found
+any(nonames<-snm=="");nonames;# TRUE ; FALSE FALSE  TRUE
+#-> is typically used as: value -> x
+#The operators <- and = assign into the environment in which they are evaluated
+#The operator <- can be used anywhere, whereas the operator = is only allowed at the top level, which means it is not allowed in control structures like if
+#use = will apply precedence i.e.: x <- y = 5#Error (x<-y) =5, it`s actually `=`(`<-`(x, y), 5)
+median(x = 1:10)
+x   
+## Error: object 'x' not found
+#x is declared within the scope of the function, so it does not exist in the user workspace
+###SUMMARY: x<-value can live out side of judge sentences while x=value cannot!!!
+
+###Greatly written##
+namedlist=function(...){
+  result=list(...)
+  #sapply(substitute(list(a="ff",1)),deparse) this step convert all vector with assigned name
+  #so all we have to do is find out which one doesnt have a name and assign it.
+  lnames=sapply(substitute(list(...)),deparse)[-1] #remove "list" in the vector
+  if(is.null(nm<-names(result))) nm<-lnames
+  if (any(nonames <- nm=="")) nm[nonames] <- lnames[nonames]
+  setNames(result,nm)
+}
+rules=namedlist(milne,boole,midpoint,trapezoid)
+plotnVSarea=function(func,n,rules){
+  lapply(rules,function(f){value=composite(sin,0, pi, n = x, rule = f);})
+  yvalue=sapply(seq_len(n),function(x) composite(sin, 0, pi, n = x, rule = milne))
+  plot(x=seq_len(n))
+}
+
+composite(sin, 0, pi, n = 1, rule = milne)
+
+
 ```
 
 
