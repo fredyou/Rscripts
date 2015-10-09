@@ -892,12 +892,23 @@ namedlist=function(...){
 }
 rules=namedlist(milne,boole,midpoint,trapezoid)
 plotnVSarea=function(func,n,rules){
-  lapply(rules,function(f){value=composite(sin,0, pi, n = x, rule = f);})
-  yvalue=sapply(seq_len(n),function(x) composite(sin, 0, pi, n = x, rule = milne))
+  require(reshape2)
+  require(ggplot2)
+  df=list()
+  for (rule in names(rules)){
+    df[[rule]]=sapply(seq_len(n),function(x) composite(func, 0, pi, n = x,rule=rules[[rule]]))
+  }
+  df$npieces=seq_len(n)
+  df=as.data.frame(df)
   plot(x=seq_len(n))
+  npieces=which.min(apply(df[,-dim(df)[2]],1,sd))
+  df=melt(df,id="npieces")
+  ggplot(df,aes(x=npieces,y=value,fill=variable,color=variable))+geom_point(pch=19)+theme_bw()
+  cat("The number of pieces is: ",npieces, "to make rule sd minimized\n")
+  return(npieces)
 }
 
-composite(sin, 0, pi, n = 1, rule = milne)
+
 
 
 ```
