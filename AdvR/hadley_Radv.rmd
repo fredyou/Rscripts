@@ -907,9 +907,160 @@ plotnVSarea=function(func,n,rules){
   cat("The number of pieces is: ",npieces, "to make rule sd minimized\n")
   return(npieces)
 }
+```
+Functionals
+
+```{r Funtionals}
+#i.e.: lapply, apply
+# The complement to a closure is a functional, a function that takes a function as an input and returns a vector as output
+randomise <- function(f) f(runif(1e3))
+randomise(mean)
+#> [1] 0.5096054
+randomise(mean)
+#> [1] 0.5123963
+randomise(sum)
+#> [1] 491.1766
+
+###Common use of functionals: 
+#1 replace for loop to improve expressiveness
+#2 using functionals will not always produce the fastest code. Instead, it helps you clearly communicate and build tools that solve a wide range of problems.
+
+##################
+##Sth about Loop##
+##################
+#1.loop over the elements: for (x in xs)
+#2.loop over the numeric indices: for (i in seq_along(xs))
+#3.loop over the names: for (nm in names(xs))
+
+#first is slow: output is usually extending the vector: res<-c(res,x)
+#second is better by: create the space at begining: res<-numeric(length(??)),then loop through vector
 
 
 
+##################################
+#Vector output: sapply and vapply#
+##################################
+#vapply() is more verbose, but gives more informative error messages and never fails silently. It is better suited for use inside other functions
+vapply(list(), is.numeric, logical(1))
+#> logical(0)
+
+#####################################
+###Multiple Inputs: Map and mapply###
+#####################################
+# Generate some sample data
+xs <- replicate(5, runif(10), simplify = FALSE)
+ws <- replicate(5, rpois(10, 5) + 1, simplify = FALSE)
+#unweighted means:
+unlist(lapply(xs, mean))
+
+#while weighted means are calculated as: weighted.mean(xs[[i]], ws[[i]])
+#so lapply should loop the seq_along(xs)
+unlist(lapply(seq_along(xs), function(i) {
+  weighted.mean(xs[[i]], ws[[i]])
+}))
+
+#Worked But clumsy, Map is better as a variant of lapply
+unlist(Map(weighted.mean,xs,ws))
+#NOTE: lapply(data,func), Map(func,data1,data2...)
+#Map is equivalent to 
+stopifnot(length(xs) == length(ws))
+out <- vector("list", length(xs))
+for (i in seq_along(xs)) {
+  out[[i]] <- weighted.mean(xs[[i]], ws[[i]])
+}
+
+##it could also divide complicated lapply function to two steps to ease debuging
+mtmeans <- lapply(mtcars, mean)
+mtmeans[] <- Map(`/`, mtcars, mtmeans)
+
+# In this case, equivalent to
+mtcars[] <- lapply(mtcars, function(x) x / mean(x))
+#If some of the arguments should be fixed and constant, use an anonymous function:
+
+Map(function(x, w) weighted.mean(x, w, na.rm = TRUE), xs, ws)
+
+####Mapply
+#Map is equivalent to mapply with simplify=F, and is more recommended
+#mapply has the MoreArgs argument that takes a list of extra arguments that will be supplied, as is, to each call. This breaks R¡¯s usual lazy evaluation semantics, and is inconsistent with other functions.
+
+#############################
+##Rolling computations######
+#############################
+#rollmean to smooth
+#n is the number of points it`s gonna come across to compute mean
+rollmean <- function(x, n) {
+  out <- rep(NA, length(x))
+
+  offset <- trunc(n / 2)
+  for (i in (offset + 1):(length(x) - n + offset + 1)) {
+    out[i] <- mean(x[(i - offset):(i + offset - 1)])
+  }
+  out
+}
+x <- seq(1, 3, length = 10) + runif(10)
+plot(x)
+lines(rollmean(x, 5), col = "blue", lwd = 2)
+###Note! use debug(rollmean);rollmean(x,5) to see value changes
+lines(rollmean(x, 10), col = "red", lwd = 2)
+
+##rewrite rollmean
+rollapply <- function(x, n, f, ...) {
+  out <- rep(NA, length(x))
+
+  offset <- trunc(n / 2)
+  for (i in (offset + 1):(length(x) - n + offset + 1)) {
+    out[i] <- f(x[(i - offset):(i + offset)], ...)
+  }
+  out
+}
+plot(x)
+lines(rollapply(x, 5, median), col = "red", lwd = 2)
+
+#rewrite again! effectively the same as the implementation in zoo::rollapply()
+rollapply <- function(x, n, f, ...) {
+  offset <- trunc(n / 2)
+  locs <- (offset + 1):(length(x) - n + offset + 1)
+  num <- vapply(
+    locs, 
+    function(i) f(x[(i - offset):(i + offset)], ...),
+    numeric(1)
+  )
+
+  c(rep(NA, offset), num)
+}
+
+######################
+##Parallelisation#####
+######################
+#lapply is order independent:
+lapply3 <- function(x, f, ...) {
+  out <- vector("list", length(x))
+  for (i in sample(seq_along(x))) {
+    out[[i]] <- f(x[[i]], ...)
+  }
+  out
+}
+unlist(lapply(1:10, sqrt))
+#>  [1] 1.000000 1.414214 1.732051 2.000000 2.236068 2.449490 2.645751
+#>  [8] 2.828427 3.000000 3.162278
+unlist(lapply3(1:10, sqrt))
+#>  [1] 1.000000 1.414214 1.732051 2.000000 2.236068 2.449490 2.645751
+#>  [8] 2.828427 3.000000 3.162278
+
+##That makes parallelization possible
+##This is what parallel::mclapply() (and parallel::mcMap()) does. (These functions are not available in Windows, but you can use the similar parLapply() with a bit more work. See parallelise for more details.)
+
+###Exercise2: Why is using sapply() to get the class() of each element in a data frame dangerous?
+#It wont warn you if class attr has length >2
+
+###Exercise3:
+#repeat runing a function for 100times!
+trials <- replicate(
+  100, 
+  t.test(rpois(10, 10), rpois(7, 10)),
+  simplify = FALSE
+)
+test=sapply(trials, `[`)
 
 ```
 
