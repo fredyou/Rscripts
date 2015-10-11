@@ -1060,7 +1060,103 @@ trials <- replicate(
   t.test(rpois(10, 10), rpois(7, 10)),
   simplify = FALSE
 )
-test=sapply(trials, `[`)
+test=sapply(trials, `[[`,"p.value")
+  
+###Exercise5:Implement a version of lapply() that supplies FUN with both the name and the value of each component.
+bapply=function(inputlist,f,...){
+  if(is.null(names(inputlist))) stop("No names in the list")
+  for (i in seq_along(inputlist)){
+    f(i,...)
+    f(names(inputlist)[i],...)
+  }
+}
+
+###???Exercise6: Implement a combination of Map() and vapply() to create an lapply() variant that iterates in parallel over all of its inputs and stores its outputs in a vector (or a matrix). What arguments should the function take?
+
+###???Exercise7:Implement mcsapply(), a multicore version of sapply(). Can you implement mcvapply(), a parallel version of vapply()? Why or why not?
+
+
+#####################################
+###Functionals for matrices or dfs###
+#####################################
+aperm() #put high-dim array  back in right order
+sweep() #apply to a matrix by row or col, and func with same length vector iteratively
+    x <- matrix(rnorm(20, 0, 10), nrow = 4)
+    x1 <- sweep(x, 1, apply(x, 1, min), `-`) #
+    x2 <- sweep(x1, 1, apply(x1, 1, max), `/`)
+outer(1:3,1:10,"*")
+#outer(行, 列,"*"), 行元素1与所有列进行"*" 然后行2....
+
+rapply() #recursively apply function to list elements
+myFun <- function(x){
+    if (is.character(x)){
+    return(paste(x,"!",sep=""))
+    }
+    else{
+    return(x + 1)
+    }
+}
+
+#A nested list structure
+l <- list(a = list(a1 = "Boo", b1 = 2, c1 = "Eeek"), 
+          b = 3, c = "Yikes", 
+          d = list(a2 = 1, b2 = list(a3 = "Hey", b3 = 5)))
+#Result is named vector, coerced to character           
+rapply(l,myFun)
+#Result is a nested list like l, with values altered
+rapply(l, myFun, how = "replace")
+
+#################
+###Group apply###
+#################
+tapply(x,INDEX,FUN,simplify)  
+##apply that allows "ragged" arrays where each row could have different num of cols
+##kinda like aggregate which is actually tapply at cores
+
+pulse <- round(rnorm(22, 70, 10 / 3)) + rep(c(0, 5), c(10, 12))
+group <- rep(c("A", "B"), c(10, 12))
+tapply(pulse, group, length)
+#machanism:
+data=split(pulse, group)
+sapply(data, length)
+
+
+by() ##usually used when tapply is not able to handle
+######Compare tapply and by###############
+#similarity between tapply and by:
+ct <- tapply(iris$Sepal.Width , iris$Species , summary )
+cb <- by(iris$Sepal.Width , iris$Species , summary )
+#difference:
+tapply(iris, iris$Species, summary ) #Error arguments must have same length
+#Here tapply cant apply to data frame, dim(iris) and iris$Species are different
+by(iris, iris$Species, summary ) #worked like a charm
+#Worked by subset dataframe by iris$Species and apply function to sub-dataframe
+
+######Compare tapply and aggregate#########
+#second argument of aggregate must be a list while tapply can (not mandatory) be a list and that the output of aggregate is a data frame while the one of tapply is an array.
+
+#######Compare by and aggregate##########
+#
+ag1 <- aggregate(cbind(Ozone, Temp) ~ Month, data = airquality, mean)
+by(airquality[c("Ozone", "Temp")], airquality$Month, mean, na.rm = TRUE) ##Error cuz mean func doesnt apply to function
+
+###Summary in input output###
+# Base function   Input   Output   plyr function 
+# ---------------------------------------
+# aggregate        d       d       ddply + colwise 
+# apply            a       a/l     aaply / alply 
+# by               d       l       dlply 
+# lapply           l       l       llply  
+# mapply           a       a/l     maply / mlply 
+# replicate        r       a/l     raply / rlply 
+# sapply           l       a       laply 
+
+
+##################
+####plyr package##
+##################
+#to make base functionals consistent
+
 
 ```
 
