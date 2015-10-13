@@ -1265,7 +1265,21 @@ arg_max=function(x,f){
 }
 
 ###Exercise2: Challenge: read about the fixed point algorithm. Complete the exercises using R.
+#fixed point: A number x is called a fixed point of a function f if x satisfies the equation f(x) = x
+fixedPoints=function(f,...){
+  fclosure=function(lambda){
+      abs(f(lambda)-lambda) #lambda is the guess
+  }
+  optimise(fclosure,...)$minimum
+}
 
+#similarly: square root function could be explained as: find minimal x where sqrt(x)=~x
+mysquaureroot=function(x){
+  fclosure=function(lambda){
+    abs(x/lambda-lambda) #lambda is the guess
+  }
+  optimise(fclosure,c(0,x))$minimum
+}
 
 #####################################
 ####Loops that better left as is#####
@@ -1274,6 +1288,173 @@ arg_max=function(x,f){
 #If you need to modify part of an existing data frame, it¡¯s often better to use a for loop. 
 #2. Recursive relationships
 #It¡¯s hard to convert a for loop into a functional when the relationship between elements is not independent, or is defined recursively.
+
+#eliminate while loop
+i <- 0
+while(TRUE) {
+  if (runif(1) > 0.9) break
+  i <- i + 1
+}
+#can turn into:
+i <- rgeom(1, 0.1)
+#the while simply mean the success in each trial is 0<prob<0.1
+
+#################
+###Case study####
+#################
+# take a simple building block and make it powerful and general.
+# Project : add function
+# This function take two args and return values that are not NA
+rm_na <- function(x, y, identity) {
+  if (is.na(x) && is.na(y)) {
+    identity
+  } else if (is.na(x)) {
+    y
+  } else {
+    x
+  }
+}  
+### It is combined with add to dealwith NA inputs  
+add <- function(x, y, na.rm = FALSE) {
+  if (na.rm && (is.na(x) || is.na(y))) rm_na(x, y, 0) else x + y
+}
+
+###lets extend add to multiple inputs
+r_add <- function(xs, na.rm = TRUE) {
+  Reduce(function(x, y) add(x, y, na.rm = na.rm), xs)
+}
+r_add(c(1, 4, 10))
+#> [1] 15
+#Note the r_add didn`t test case that xs is just length 1 or 0
+r_add(NA, na.rm = TRUE)
+#> [1] NA
+r_add(numeric())
+#> NULL
+r_add(1)  #in this con,xs is only length 1 and it still worked .We can tell it`s because of 
+#Reduce(),  If we give Reduce() a length one vector, it doesn¡¯t have anything to reduce, so it just returns the input. If we give it an input of length zero, it always returns NULL. 
+
+###simply add init arg
+r_add <- function(xs, na.rm = TRUE) {
+  Reduce(function(x, y) add(x, y, na.rm = na.rm), xs, init = 0)
+}
+r_add(c(1, 4, 10))
+#> [1] 15
+r_add(NA, na.rm = TRUE)
+#> [1] 0
+r_add(numeric())
+#> [1] 0
+
+###Note add is not vectorised, lets make it to be so
+#vectorise by Map or vapply
+v_add1=function(x,y,na.rm=F){
+  stopifnot(length(x)==length(y),is.numeric(x),is.numeric(y)) #pay attention to the grammer
+  if(length(x)==0 ||length(y)==0) return(numeric())
+  simplify2array(
+    Map(add(na.rm=na.rm),x,y)
+  )
+}
+
+v_add2=function(x,y,na.rm=F){
+  stopifnot(length(x)==length(y),is.numeric(x),is.numeric(y)) #pay attention to the grammer
+  vapply(seq_along(x),function(i){add(x[i],y[i],na.rm=na.rm)},numeric(1))
+}
+
+###variant of add: Cumulative sum
+c_add <- function(xs, na.rm = FALSE) {
+  Reduce(function(x, y) add(x, y, na.rm = na.rm), xs,
+    accumulate = TRUE)
+}
+#by setting accumulate=T, it print out result of every combine
+#This is equivalent to cumsum().
+
+###Exercise1: Implement smaller and larger functions that, given two inputs, return either the smaller or the larger value. Implement na.rm = TRUE: what should the identity be? (Hint: smaller(x, smaller(NA, NA, na.rm = TRUE), na.rm = TRUE) must be x, so smaller(NA, NA, na.rm = TRUE) must be bigger than any other value of x.) Use smaller and larger to implement equivalents of min(), max(), pmin(), pmax(), and new functions row_min() and row_max().
+subNA=function(x,y,identity){
+  if (is.na(x) && is.na(y)) {
+    identity
+  } else if (is.na(x)) {
+    y
+  } else {
+    x
+  }
+}
+
+smaller=function(x,y,na.rm=F){
+  if(na.rm && (is.na(x)||is.na(y))) return(subNA(x,y,Inf))
+  else if(is.na(x)||is.na(y)){
+    return(NA)
+  }
+  if(x>y) return(y)
+  else return(x)
+}
+
+larger=function(x,y,na.rm=F){
+  if(na.rm && (is.na(x)||is.na(y))) return(subNA(x,y,-Inf))
+  else if(is.na(x)||is.na(y)){
+    return(NA)
+  }
+  if(x>y) return(x)
+  else return(y)
+}
+
+min=function(...,na.rm=F){
+  elements=c(...)
+  Reduce(function(x,y){smaller(x,y,na.rm=na.rm)},elements)
+}
+max=function(...,na.rm=F){
+  elements=c(...)
+  Reduce(function(x,y){larger(x,y,na.rm=na.rm)},elements)
+}
+
+pmin=function(...,na.rm=F){
+  inputlist=list(...)
+  #Here I defined recycling of vector, maybe it is better not to recycle to prevent extra silent bugs
+  if(all(sapply(inputlist,length)==1)){
+    min(unlist(inputlist),na.rm=na.rm)
+  }else{
+    lens=vapply(seq_along(inputlist),function(x){length(inputlist[[x]])},numeric(1))
+    inputlist=lapply(inputlist,rep,length=max(lens))
+    simplify2array(
+      apply(as.data.frame(inputlist),1,min,na.rm=na.rm)
+    )
+  }  
+}
+
+
+pmax=function(...,na.rm=F){
+  inputlist=list(...)
+  #Here I defined recycling of vector, maybe it is better not to recycle to prevent extra silent bugs
+  if(all(sapply(inputlist,length)==1)){
+    max(unlist(inputlist),na.rm=na.rm)
+  }else{
+    lens=vapply(seq_along(inputlist),function(x){length(inputlist[[x]])},numeric(1))
+    inputlist=lapply(inputlist,rep,length=max(lens))
+    simplify2array(
+      apply(as.data.frame(inputlist),1,max,na.rm=na.rm)
+    )
+  }  
+}
+
+row_min=function(data){
+  apply(data,1,min)
+}
+
+row_max=function(data){
+  apply(data,1,max)
+}
+
+###Exercise2: Create a table that has and, or, add, multiply, smaller, and 
+###larger in the columns and binary operator, reducing variant, vectorised 
+###variant, and array variants in the rows.
+###a. Fill in the cells with the names of base R functions that perform each of the roles.
+###b. Compare the names and arguments of the existing R functions. How consistent are they? How could ###   you improve them?
+###c. Complete the matrix by implementing any missing functions.
+a.              and   or  add   multiply   smaller   larger
+binary          &     |    +       *         <          >
+reducing var
+vectorised var
+array var
+
+
 ```
 
 
