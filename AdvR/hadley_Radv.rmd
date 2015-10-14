@@ -1649,7 +1649,19 @@ funop <- function(f, otherargs) {
     res
   }
 }
+#One problem is that f()  is lazily evaluated, which means it may have changed before apply and evaluate
+delay_by <- function(delay, f) {
+  function(...) {
+    Sys.sleep(delay)
+    f(...)
+  }
+}
+funs <- list(mean = mean, sum = sum)
+funs_m <- lapply(funs, delay_by, delay = 0.1)
+###since R 3.2 this lazy evaluation seems not to be a problem now
 
+###Exercise1: 
+timestamp=function(...,f){f(...);}
 
 ```
 
