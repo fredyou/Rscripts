@@ -1476,6 +1476,182 @@ replicate(500,randomise(sum)) %>%
 #paste seems to be functional for all variants like vectorise, array, list, data.frame, etc
 
 ```
+Function Operators
+```{r function operators}
+#########
+###FOs###
+#########
+### A function operator is a function that takes one (or more) functions as input and returns a function as output. The result function act like a wrap of input functions
+#Compared to closure, it need functions as input while closure don`t neccessarily need
+#Compared to functionals, it returns a function rather than a data type
+compact1 <- function(x) Filter(Negate(is.null), x)
+compact2 <- partial(Filter, Negate(is.null))
+
+##################
+##Behavioural FO##
+##################
+###Example function with three behaviours:
+# Add a delay to avoid swamping a server with requests.
+# Print to console every n invocations to check on a long running process.
+# Cache previous computations to improve performance.
+download_file <- function(url, ...) {
+  download.file(url, basename(url), ...)
+} #a wrapper of utils::download.file()
+lapply(urls, download_file)
+
+###To implement 3 behaviours:
+i <- 1
+for(url in urls) {
+  i <- i + 1
+  if (i %% 10 == 0) cat(".") #cat . for every 10 urls to show its still working
+  Sys.delay(1)  #set delay for not harming server
+  download_file(url)
+}
+#However, it is hard to understand the code without comment
+
+###By create a FO we could encapsulate each behaviour . i.e:
+lapply(urls, dot_every(10, delay_by(1, download_file)))
+
+delay_by <- function(delay, f) {
+  function(...) {
+    Sys.sleep(delay)
+    f(...)
+  }
+}
+system.time(runif(100))
+#>    user  system elapsed 
+#>   0.001   0.000   0.000
+system.time(delay_by(0.1, runif)(100))
+#>    user  system elapsed 
+#>   0.000   0.000   0.101
+
+dot_every <- function(n, f) {
+  i <- 1
+  function(...) {
+    if (i %% n == 0) cat(".")
+    i <<- i + 1
+    f(...)
+  }
+}
+
+### arg f is better to be left as last argument. otherwise:
+download <- dot_every(delay_by(download_file, 1), 10)
+#would be very hard to follow
+#better:
+lapply(urls, dot_every(10, delay_by(1, download_file)))
+
+####################
+####Memoisation#####
+####################
+#A memoised function can run much faster because it stores all of the previous inputs and outputs, using more memory
+#A realistic use of memoisation is computing the Fibonacci series. The Fibonacci series is defined recursively: the first two values are 1 and 1, then f(n) = f(n - 1) + f(n - 2)
+#naive version of R implementation is slow cuz it computes f(n-2) f(n-1) duplicated times
+fib <- function(n) {
+  if (n < 2) return(1)
+  fib(n - 2) + fib(n - 1)
+}
+system.time(fib(23))
+#>    user  system elapsed 
+#>   0.125   0.006   0.132
+system.time(fib(24))
+#>    user  system elapsed 
+#>   0.194   0.003   0.196
+
+###Now lets memoise the function!
+fib2 <- memoise(function(n) {
+  if (n < 2) return(1)
+  fib2(n - 2) + fib2(n - 1)
+})
+system.time(fib2(23))
+#>    user  system elapsed 
+#>   0.004   0.000   0.004
+system.time(fib2(24))
+#>    user  system elapsed 
+#>   0.001   0.000   0.000
+
+###machanism of memoise is just store key and result into a cache list
+runifm <- memoise(runif)
+#this runifm is actually a function that do two conditional operation:
+#1. if digest(list(...)) is in cache list, just get the result(prevent duplicated computation)
+#2. if not in cache list, use the "runif" func stored in the closure to compute,then set the value with cache
+runifm(5)
+#> [1] 0.5374603 0.3466054 0.3079437 0.3631236 0.9511340
+runifm(5)
+#> [1] 0.5374603 0.3466054 0.3079437 0.3631236 0.9511340
+
+###Finally
+download <- dot_every(10, memoise(delay_by(1, download_file)))
+
+##################################
+##Capturing function invocations##
+##################################
+#it can be hard to see what¡¯s going on inside of functionals
+#we can use FOs to peer behind the curtain with tee()
+ignore <- function(...) NULL
+#use tee , a FO to show what`s going on inside functionals
+tee <- function(f, on_input = ignore, on_output = ignore) {
+  function(...) {
+    on_input(...)
+    output <- f(...)
+    on_output(output)
+    output
+  }
+}
+#i.e:
+g <- function(x) cos(x) - x
+zero <- uniroot(g, c(-5, 5))
+show_x <- function(x, ...) cat(sprintf("%+.08f", x), "\n")
+zero <- uniroot(tee(g, on_input = show_x), c(-5, 5))
+#what tee is doing is simply add a layer of show_x before g(x) 
+#So the on_input,on_output could display input arg for g(x) and output of g(x)
+zero <- uniroot(tee(g, on_output = show_x), c(-5, 5))
+
+###In order to catch the output of func on_input , on_output,we actually have to 
+#store them in a list.
+#to maintain the list unchanged, we have to make the list a global var in a closure:
+remember <- function() {
+  memory <- list()
+  f <- function(...) {
+    # This is inefficient!
+    memory <<- append(memory, list(...))
+    invisible()
+  }
+
+  structure(f, class = "remember")
+}
+as.list.remember <- function(x, ...) {
+  environment(x)$memory
+}
+#the print.remeber is inevitable
+print.remember <- function(x, ...) {
+  cat("Remembering...\n")
+  str(as.list(x))
+} #otherwise type a remember class will return a closure and append NULL arguments
+
+###test remember func
+locs <- remember()  #create a list of memory that append itself args foreach looop
+vals <- remember()
+zero <- uniroot(tee(g, locs, vals), c(-5, 5))
+x <- unlist(as.list(locs))
+error <- unlist(as.list(vals))
+plot(x, type = "b"); abline(h = 0.739, col = "grey50")
+plot(error, type = "b"); abline(h = 0, col = "grey50")
+
+############
+##Laziness##
+############
+#The FO we ve seen so far is commonly:
+funop <- function(f, otherargs) {
+  function(...) {
+    # maybe do something
+    res <- f(...)
+    # maybe do something else
+    res
+  }
+}
+
+
+```
 
 
 
