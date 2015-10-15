@@ -1660,8 +1660,126 @@ funs <- list(mean = mean, sum = sum)
 funs_m <- lapply(funs, delay_by, delay = 0.1)
 ###since R 3.2 this lazy evaluation seems not to be a problem now
 
-###Exercise1: 
-timestamp=function(...,f){f(...);}
+###Exercise1: Write a FO that logs a time stamp and message to a file every time a function is run.
+timestamp=function(logfile,f){
+   function(...){
+     result=f(...)
+     cat(date(),"\n",file=logfile,append=T)
+     result
+   }  
+}
+
+###Exercise2: What does the following function do? What would be a good name for it?
+f <- function(g) {
+  force(g)
+  result <- NULL
+  function(...) {
+    if (is.null(result)) {
+      result <<- g(...)
+    }
+    result
+  }
+}
+runif2 <- f(runif)
+runif2(5)
+#> [1] 0.9740204 0.1269874 0.2954060 0.2944669 0.6048259
+runif2(10)
+#> [1] 0.9740204 0.1269874 0.2954060 0.2944669 0.6048259
+#Answer: this function shall be called runOnce
+
+###Exercise3 : defined a delay_by that instead ensures a certain time elapsed after function call
+delay_by <- function(delay, f) {
+  time=NULL
+  function(...) {
+    if( is.null(time)|| as.double(Sys.time()-time)>=delay){
+      f(...)
+      time<<-Sys.time()
+    }else{
+      Sys.sleep(delay-as.double(Sys.time()-time))
+      f(...)
+      time<<-Sys.time()
+    }
+  }
+} #考虑三个逻辑：第一次运行，延误超时后的运行和不超时的运行
+
+delay_by2 <- function(delay, f)
+{
+  delay_until <- Sys.time()
+
+  function(...)
+  {
+    if(delay_until - Sys.time() > 0) {
+      Sys.sleep(delay_until - Sys.time())
+    }
+
+    res <- f(...)
+    delay_until <<- Sys.time() + delay
+    res
+  }  
+} #BETTER!!!考虑两个逻辑 满足delay和不满足delay:
+  #满足delay: 要延迟的时间小于当前时间（第一次运行和超时运行）
+  #不满足delay: 要延迟到的时间大于当前时间,程序拖延到延迟时间
+
+delay_by3 <- function(delay, f)
+{
+  executime <- 0
+  #如果换成<-Sys.time(),执行时间就不对了,因为第一次执行并不是Sys.time
+  #得到经验:数值,时间的初始值最好是0
+  function(...)
+  {
+    if(Sys.time()-executime < delay) {
+      print(delay-(Sys.time()-executime))
+      Sys.sleep(delay-(Sys.time()-executime))
+    }#距离上次call时间在delay内,则delay
+    res <- f(...)
+    executime <<- Sys.time()
+    res
+  }  
+}#但是注意Sys.time()-executime < delay ->Sys.time()< delay+executime
+ #在executime=0的时候,如果delay 异常大,大过现在时间的话,会变成True
+ #但如果变换式子为Sys.time()-delay<executime,则可设初始executime为-inf,则初始必false
+ #Sys.time()-delay< -(Inf)
+ #在delay2 func中delay_until - Sys.time() > 0 ,在第一次运行时永不为true(Sys.time-Sys.time==0!>0)
+delay_by3gai <- function(delay, f)
+{
+  executime <- -Inf
+  #如果换成<-Sys.time(),执行时间就不对了,因为第一次执行并不是Sys.time
+  #得到经验:数值,时间的初始值最好是0
+  function(...)
+  {
+    if(Sys.time()- delay< executime) {
+      print(delay-(Sys.time()-executime))
+      Sys.sleep(delay-(Sys.time()-executime))
+    }#距离上次call时间在delay内,则delay
+    res <- f(...)
+    executime <<- Sys.time()
+    res
+  }  
+}
+
+f=function(){print("Executed once");print(Sys.time());return(NULL)}
+g<-delay_by(1,f);g();Sys.sleep(2);g()
+#####Note: if 中的condition 不等式左右换位可有大不同.
+#如何推导delay_until - Sys.time() > 0这个条件?
+########## 考虑两个动态变化的时间点(数据)时,最好画两条线
+#   establish    call      call2
+# -----*-----------*--*----*---
+#                  *----*
+#       {         }{delay}
+#{}{delay}的长度最长,第一次call时establish的时间短于或等于call的时间:time<-Sys.time;funciton(){if(time<=sys.time).... 也即time <=sys.time
+#第二次call的时候call2的system.time>=call1time+delay,也即call1time+delay<=sys.time
+#这样的话establish time就应该按照calltime+delay来取名,第一次establish time为sys.time of FO ,call之后为sys.time of closure+delay
+
+###Exercies5: There are three places we could have added a memoise call: why did we choose the one we did?
+download.file=function(x,y){print(x);print(y)}
+urls2=as.list(c(LETTERS))
+download <- memoise(dot_every(10, delay_by(1, download_file)))
+#download() is just like
+download <- dot_every(10, memoise(delay_by(1, download_file)))
+download <- dot_every(10, delay_by(1, memoise(download_file)))
+#delay_by actually execute download_file function while memoise(download_file) 
+
+test=lapply(urls2,)
 
 ```
 
