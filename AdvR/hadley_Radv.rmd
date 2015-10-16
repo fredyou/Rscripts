@@ -1490,6 +1490,7 @@ compact2 <- partial(Filter, Negate(is.null))
 ##################
 ##Behavioural FO##
 ##################
+#Behavioural FOs leave the inputs and outputs of a function unchanged, but add some extra behaviour. 
 ###Example function with three behaviours:
 # Add a delay to avoid swamping a server with requests.
 # Print to console every n invocations to check on a long running process.
@@ -1771,15 +1772,115 @@ g<-delay_by(1,f);g();Sys.sleep(2);g()
 #这样的话establish time就应该按照calltime+delay来取名,第一次establish time为sys.time of FO ,call之后为sys.time of closure+delay
 
 ###Exercies5: There are three places we could have added a memoise call: why did we choose the one we did?
-download.file=function(x,y){print(x);print(y)}
-urls2=as.list(c(LETTERS))
+delay_by <- function(delay, f) {
+  function(...) {
+    Sys.sleep(delay)
+    f(...)
+  }
+}
+
+dot_every <- function(n, f) {
+  i <- 1
+  function(...) {
+    if (i %% n == 0) cat(".")
+    i <<- i + 1
+    f(...)
+  }
+}
+download.file=function(x){cat("downloading");print(x);}
+download_file <- function(url, ...) {
+  download.file(url, ...)
+}
+urls=as.list(c(LETTERS[1:4],rep("E",20))) #duplicate E
+urls2=as.list(c(LETTERS)) #non duplicates
 download <- memoise(dot_every(10, delay_by(1, download_file)))
 #download() is just like
 download <- dot_every(10, memoise(delay_by(1, download_file)))
+#begin doting at 10,difference is 26 secs
 download <- dot_every(10, delay_by(1, memoise(download_file)))
-#delay_by actually execute download_file function while memoise(download_file) 
+#test by non duplicates
+start=Sys.time()
+test=lapply(urls2,download)
+print(Sys.time()-start)
+#test by duplicates
+start=Sys.time()
+test=lapply(urls,download)
+print(Sys.time()-start)
+#as.list(environment(download))$cache$keys()
+###Answer: if there`s no duplicates in urls2: the first run of all three is the same
+###         But, second run of the first two  would be different:
+###download <- memoise(dot_every(10, delay_by(1, download_file))) would not perform dot_every
+###download <- dot_every(10, memoise(delay_by(1, download_file))) would dot, but would not delay
+###download <- dot_every(10, delay_by(1, memoise(download_file))) would dot and also delay
+###         if there`s duplicates in urls: first run would be different:
+###download <- memoise(dot_every(10, delay_by(1, download_file))) not dotting if dup happend before ###                                                   dotting start number,get dup res rather fast
+###download <- dot_every(10, memoise(delay_by(1, download_file))) would dot, get dup res fast
+###download <- dot_every(10, delay_by(1, memoise(download_file))) would dot and delay anyway
 
-test=lapply(urls2,)
+###IMPORTANT SUMMARY:momoise store f in its closure, if calculated once, f would never function again
+###We choose the middle one cuz we want the dot happen while the delay does not if dup in urls
+
+###Exercise6: Why is the remember() function inefficient? How could you implement it in more efficient way?
+remember <- function() {
+  memory <- list()
+  f <- function(...) {
+    # This is inefficient!
+    memory <<- append(memory, list(...))
+    invisible()
+  }
+
+  structure(f, class = "remember")
+}
+as.list.remember <- function(x, ...) {
+  environment(x)$memory
+}
+print.remember <- function(x, ...) {
+  cat("Remembering...\n")
+  str(as.list(x))
+}
+
+ignore <- function(...) NULL
+tee <- function(f, on_input = ignore, on_output = ignore) {
+  function(...) {
+    on_input(...)
+    output <- f(...)
+    on_output(output)
+    output
+  }
+}
+g <- function(x) cos(x) - x
+
+###test:
+locs <- remember()
+vals <- remember()
+start=Sys.time()
+zero <- uniroot(tee(g, locs, vals), c(-5, 5))
+print(Sys.time()-start)
+x <- unlist(as.list(locs))
+error <- unlist(as.list(vals))
+
+##Here we can hardly see its inefficiency but my guess is it lies in the recopy of list every time ##remember called
+
+
+###Exercise7: Why does the following code, from stackoverflow, not do what you expect?
+# return a linear function with slope a and intercept b.
+f <- function(a, b) function(x) a * x + b
+# create a list of functions with different parameters.
+fs <- Map(f, a = c(0, 1), b = c(0, 1))
+#fs[[1]](3) :4
+###This is historically wrong because of lazy evaluation, 
+###so in the past we had to f=function(a,b){force(a);force(b);}
+###But, this is no longer a problem now.
+
+################
+###Output FOs###
+################
+## modify the output of a function.
+#two simple modification: Negate() and failwith()
+#two fundamental modification: capture_it() and time_it()
+
+
+
 
 ```
 
