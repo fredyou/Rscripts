@@ -1980,6 +1980,116 @@ track2 <- function(f)
   }
 }
 
+#############
+##Input FOs##
+#############
+###IN MINOR WAY: partial function variant
+#It is a function that has certain arguments ¡°filled in¡± already. This is called ¡°partial function application¡±, and is implemented by pryr::partial().
+
+f <- function(a) g(a, b = 1)
+#replaced with:
+f <- partial(g, b = 1)
+
+#This is useful when we had to simplify code that working with lists of functions
+funs2 <- list(
+  sum = function(...) sum(..., na.rm = TRUE),
+  mean = function(...) mean(..., na.rm = TRUE),
+  median = function(...) median(..., na.rm = TRUE)
+)
+#we can write:
+library(pryr)
+funs2 <- list(
+  sum = partial(sum, na.rm = TRUE),
+  mean = partial(mean, na.rm = TRUE),
+  median = partial(median, na.rm = TRUE)
+)
+
+###IN MAJOR WAY: change input types
+#base::Vectorize() converts a scalar function to a vector function, 
+#i.e
+sample(1:5, 5:3) #unvectorized
+sample2 <- Vectorize(sample, "size", SIMPLIFY = FALSE) #vectorize the size argument of sample
+#SIMPLIFY = FALSE to ensure that our newly vectorised function always returns a list. This is usually what you want
+sample2(1:5,5:3) 
+
+#splat() converts a function that takes multiple arguments to a function that takes a single list of arguments.
+#i.e
+splat <- function (f) {
+  force(f)
+  function(args) {
+    do.call(f, args)
+  }
+}
+
+###Very usefull if you invoke a function with varying arguments:
+x <- c(NA, runif(100), 1000)
+args <- list(
+  list(x),
+  list(x, na.rm = TRUE),
+  list(x, na.rm = TRUE, trim = 0.1) #trim both tail 10% of data
+)
+lapply(args, splat(mean))
+
+###plyr::colwise() converts a vector function to one that works with data frames:
+plyr::colwise(median)(mtcars)
+
+###Exercise1: Our previous download() function only downloads a single file. How can you use partial() and lapply() to create a function that downloads multiple files at once? What are the pros and cons of using partial() vs. writing a function by hand?
+#It is the same course of turning a single input func into a list input func
+download=function(url){cat("Url is :",url,"\n")}
+urls=list(ur1="sdfasfd",ur2="dfsfa")
+download2=function(urls){lapply(urls,download)}
+download2=function(...){lapply(...,FUN=download)} 
+download2=partial(lapply,FUN=download) #NOTE!! Here we must have "FUN=download"!!Otherwise the order is not right!!
+#Anwser, I think the pros of partial is it clearly shows what function it is partial from
+#But, it makes it less flexible in manipulating args of a closure.
+
+###Exercise2: Read the source code for plyr::colwise(). How does the code work? What are colwise()¡¯s three main tasks? How could you make colwise() simpler by implementing each task as a function operator? (Hint: think about partial().)
+function (.fun, .cols = true, ...) 
+{
+    if (!is.function(.cols)) {
+        .cols <- as.quoted(.cols)
+        filter <- function(df) eval.quoted(.cols, df)
+    }
+    else {
+        filter <- function(df) Filter(.cols, df)
+    }
+    dots <- list(...)
+    function(df, ...) {
+        stopifnot(is.data.frame(df))
+        df <- strip_splits(df)
+        filtered <- filter(df)
+        if (length(filtered) == 0) 
+            return(data.frame())
+        out <- do.call("lapply", c(list(filtered, .fun, ...), 
+            dots))
+        names(out) <- names(filtered)
+        quickdf(out)
+    }
+}
+###Answer:
+###A filter function is created. The function first tests to see if .cols is a function or not. If it is a function, it creates a filter function to apply .cols to a data frame. If not a function, it creates a filter function to filter a data frame based on the indexes given in .cols.
+# The output function is created. The first process in the output function is to apply the filter function to the input data frame.
+# The output function applies any extra arguments to the data.frame using the ... supplied.
+# A data frame is returned.
+###To simplify, the filter function could be partial() ed
+
+###Exercise4: You¡¯ve seen five functions that modify a function to change its output from one form to another. What are they? Draw a table of the various combinations of types of outputs: what should go in the rows and what should go in the columns? What function operators might you want to write to fill in the missing cells? Come up with example use cases.
+###Answer:
+#               scalar	     vector	      matrix	     data frame	   arg1, arg2, ...	list(args)
+# scalar						
+# vector	     Vectorize()					
+# matrix				                                       df_matrix()		
+# data frame		            colwise()	  matrix_df()			
+# arg1, arg2, ...						
+# list(args)					                                                 splat()
+
+#################
+##Combining FOs##
+#################
+
+
+
+
 ```
 
 
