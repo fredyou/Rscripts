@@ -2086,8 +2086,31 @@ function (.fun, .cols = true, ...)
 #################
 ##Combining FOs##
 #################
+###function operators can take multiple functions as input. One simple example of this is plyr::each(). It takes a list of vectorised functions and combines them into a single function.
+summaries <- plyr::each(mean, sd, median)
+summaries(1:10)
 
+###function composition
+sapply(mtcars, function(x) length(unique(x)))
+#A simple version of compose looks like this:
+compose <- function(f, g) {
+  function(...) f(g(...))
+}
+sapply(mtcars, compose(length, unique))
 
+###Mathematically, function composition is often denoted with the infix operator, o, (f o g)(x).
+"%o%" <- compose
+sapply(mtcars, length %o% unique)
+
+###%o% this makes funciton more succinct
+square <- function(x) x^2
+deviation <- function(x) x - mean(x)
+#population mean
+sd2 <- sqrt %o% mean %o% square %o% deviation
+sd2(1:10)
+###This type of programming is called tacit or point-free programming
+### In this style of programming, you don¡¯t explicitly refer to variables. Instead, you focus on the high-level composition of functions rather than the low-level flow of data. The focus is on what¡¯s being done, not on objects it¡¯s being done to. Since we¡¯re using only functions and not parameters, we use verbs and not nouns. This style is common in Haskell
+###compose() is particularly useful in conjunction with partial(), because partial() allows you to supply additional arguments to the functions being composed. One nice side effect of this style of programming is that it keeps a function¡¯s arguments near its name.
 
 
 ```
