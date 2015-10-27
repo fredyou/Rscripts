@@ -2106,11 +2106,80 @@ sapply(mtcars, length %o% unique)
 square <- function(x) x^2
 deviation <- function(x) x - mean(x)
 #population mean
-sd2 <- sqrt %o% mean %o% square %o% deviation
+sd2 <- sqrt %o% mean %o% square %o% deviation #right most is the inner most
 sd2(1:10)
 ###This type of programming is called tacit or point-free programming
 ### In this style of programming, you don¡¯t explicitly refer to variables. Instead, you focus on the high-level composition of functions rather than the low-level flow of data. The focus is on what¡¯s being done, not on objects it¡¯s being done to. Since we¡¯re using only functions and not parameters, we use verbs and not nouns. This style is common in Haskell
 ###compose() is particularly useful in conjunction with partial(), because partial() allows you to supply additional arguments to the functions being composed. One nice side effect of this style of programming is that it keeps a function¡¯s arguments near its name.
+
+##rewrite download with compose style
+download <- dot_every(10, memoise(delay_by(1, download_file)))
+
+download <- pryr::compose(
+  partial(dot_every, 10),
+  memoise,
+  partial(delay_by, 1),
+  download_file
+)
+
+download <- partial(dot_every, 10) %o%
+  memoise %o%
+  partial(delay_by, 1) %o%
+  download_file
+
+###Exercise1:Implement your own version of compose() using Reduce and %o%. For bonus points, do it without calling function.
+mycompose=function(f,g){
+  Reduce(function(f,...){f(...)},list(f,g,2))
+}
+#Or if by %o% it means compose function rather than outer function:
+compose <- function(f, g) {
+  function(...) f(g(...))
+}
+my_compose=function(...){
+  `%o%`=compose
+  funlist=lapply(list(...),match.fun)
+  Reduce(`%o%`,funlist)
+}
+square <- function(x) x^2
+over_5 <- function(x) x/5
+times_2 <- function(x) 2*x
+
+my_fun <- my_compose(times_2, square, over_5)
+my_fun(10)
+
+###Exercise2: Extend and() and or() to deal with any number of input functions. Can you do it with Reduce()? Can you keep them lazy (e.g., for and(), the function returns once it sees the first FALSE)?
+myOr=function(...){
+  funlist=lapply(list(...),match.fun)
+  function(...){
+    resultlist=lapply(funlist, function(f){f(...)})
+    Reduce(`||`,c(resultlist))
+  }
+}
+chrOrnum=myOr(is.character,is.numeric)
+chrOrnum(TRUE)
+chrOrnum(1)
+
+###Exercise3:Implement the xor() binary operator. Implement it using the existing xor() function. Implement it as a combination of and() and or(). What are the advantages and disadvantages of each approach? Also think about what you¡¯ll call the resulting function to avoid a clash with the existing xor() function, and how you might change the names of and(), not(), and or() to keep them consistent.
+and <- function(f1, f2) {
+  force(f1); force(f2)
+  function(...) {
+    f1(...) && f2(...)
+  }
+}
+
+or <- function(f1, f2) {
+  force(f1); force(f2)
+  function(...) {
+    f1(...) || f2(...)
+  }
+}
+
+`%xor%`<-function(x,y){
+  xor(x,y)
+}
+TRUE %xor% FALSE
+
+###Exercise4:Above, we implemented boolean algebra for functions that return a logical function. Implement elementary algebra (plus(), minus(), multiply(), divide(), exponentiate(), log()) for functions that return numeric vectors.
 
 
 ```
