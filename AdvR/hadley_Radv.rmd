@@ -296,7 +296,7 @@ count=sapply(
   function(x){ length(showMethods(class=x,printTo=F)[ grep("Function",showMethods(class="RangedNumeric", printTo =FALSE ))])})
 which(count==max(count)) 
 
-###Exercise2 What happens if you define a new S4 class that doesn’t “contain” an existing class? (Hint: read about virtual classes in ?Classes.)
+###Exercise2 What happens if you define a new S4 class that doesn’t “contain�? an existing class? (Hint: read about virtual classes in ?Classes.)
 setClass("Person") OR #setClass("Person",slots...,contains="VIRTUAL")
 #cannot use new() to create objects but could be extended by subclass
 
@@ -1085,7 +1085,7 @@ sweep() #apply to a matrix by row or col, and func with same length vector itera
     x1 <- sweep(x, 1, apply(x, 1, min), `-`) #
     x2 <- sweep(x1, 1, apply(x1, 1, max), `/`)
 outer(1:3,1:10,"*")
-#outer(行, 列,"*"), 行元素1与所有列进行"*" 然后行2....
+#outer(�?, �?,"*"), 行元�?1与所有列进行"*" 然后�?2....
 
 rapply() #recursively apply function to list elements
 myFun <- function(x){
@@ -1701,7 +1701,7 @@ delay_by <- function(delay, f) {
       time<<-Sys.time()
     }
   }
-} #考虑三个逻辑：第一次运行，延误超时后的运行和不超时的运行
+} #考虑三个逻辑：第一次运行，延误超时后的运行和不超时的运�?
 
 delay_by2 <- function(delay, f)
 {
@@ -1718,40 +1718,40 @@ delay_by2 <- function(delay, f)
     res
   }  
 } #BETTER!!!考虑两个逻辑 满足delay和不满足delay:
-  #满足delay: 要延迟的时间小于当前时间（第一次运行和超时运行）
-  #不满足delay: 要延迟到的时间大于当前时间,程序拖延到延迟时间
+  #满足delay: 要延迟的时间小于当前时间（第一次运行和超时运行�?
+  #不满足delay: 要延迟到的时间大于当前时�?,程序拖延到延迟时�?
 
 delay_by3 <- function(delay, f)
 {
   executime <- 0
   #如果换成<-Sys.time(),执行时间就不对了,因为第一次执行并不是Sys.time
-  #得到经验:数值,时间的初始值最好是0
+  #得到经验:数�?,时间的初始值最好是0
   function(...)
   {
     if(Sys.time()-executime < delay) {
       print(delay-(Sys.time()-executime))
       Sys.sleep(delay-(Sys.time()-executime))
-    }#距离上次call时间在delay内,则delay
+    }#距离上次call时间在delay�?,则delay
     res <- f(...)
     executime <<- Sys.time()
     res
   }  
 }#但是注意Sys.time()-executime < delay ->Sys.time()< delay+executime
- #在executime=0的时候,如果delay 异常大,大过现在时间的话,会变成True
- #但如果变换式子为Sys.time()-delay<executime,则可设初始executime为-inf,则初始必false
+ #在executime=0的时�?,如果delay 异常�?,大过现在时间的话,会变成True
+ #但如果变换式子为Sys.time()-delay<executime,则可设初始executime�?-inf,则初始必false
  #Sys.time()-delay< -(Inf)
  #在delay2 func中delay_until - Sys.time() > 0 ,在第一次运行时永不为true(Sys.time-Sys.time==0!>0)
 delay_by3gai <- function(delay, f)
 {
   executime <- -Inf
   #如果换成<-Sys.time(),执行时间就不对了,因为第一次执行并不是Sys.time
-  #得到经验:数值,时间的初始值最好是0
+  #得到经验:数�?,时间的初始值最好是0
   function(...)
   {
     if(Sys.time()- delay< executime) {
       print(delay-(Sys.time()-executime))
       Sys.sleep(delay-(Sys.time()-executime))
-    }#距离上次call时间在delay内,则delay
+    }#距离上次call时间在delay�?,则delay
     res <- f(...)
     executime <<- Sys.time()
     res
@@ -1762,14 +1762,14 @@ f=function(){print("Executed once");print(Sys.time());return(NULL)}
 g<-delay_by(1,f);g();Sys.sleep(2);g()
 #####Note: if 中的condition 不等式左右换位可有大不同.
 #如何推导delay_until - Sys.time() > 0这个条件?
-########## 考虑两个动态变化的时间点(数据)时,最好画两条线
+########## 考虑两个动态变化的时间�?(数据)�?,最好画两条�?
 #   establish    call      call2
 # -----*-----------*--*----*---
 #                  *----*
 #       {         }{delay}
-#{}{delay}的长度最长,第一次call时establish的时间短于或等于call的时间:time<-Sys.time;funciton(){if(time<=sys.time).... 也即time <=sys.time
+#{}{delay}的长度最�?,第一次call时establish的时间短于或等于call的时�?:time<-Sys.time;funciton(){if(time<=sys.time).... 也即time <=sys.time
 #第二次call的时候call2的system.time>=call1time+delay,也即call1time+delay<=sys.time
-#这样的话establish time就应该按照calltime+delay来取名,第一次establish time为sys.time of FO ,call之后为sys.time of closure+delay
+#这样的话establish time就应该按照calltime+delay来取�?,第一次establish time为sys.time of FO ,call之后为sys.time of closure+delay
 
 ###Exercies5: There are three places we could have added a memoise call: why did we choose the one we did?
 delay_by <- function(delay, f) {
@@ -1984,7 +1984,7 @@ track2 <- function(f)
 ##Input FOs##
 #############
 ###IN MINOR WAY: partial function variant
-#It is a function that has certain arguments “filled in” already. This is called “partial function application”, and is implemented by pryr::partial().
+#It is a function that has certain arguments “filled in�? already. This is called “partial function application�?, and is implemented by pryr::partial().
 
 f <- function(a) g(a, b = 1)
 #replaced with:
@@ -2278,11 +2278,29 @@ subset2(sample_df2, x > 8)
 
 ###Exercise5: The second argument in subset(,,select=...) allows you to select variables.How does it work?
 
-subset3=function(df,con,select){
-  judge= ifelse(missing(con),rep(TRUE,dim(df)[1]),eval(substitute(con),df))
-  
-  return(df[judge & !is.na(judge),deparse(substitute(select)),drop=F])
+subset3=function(dataf,con,select){
+  judge<- if(missing(con)){
+    rep(TRUE,dim(dataf)[1])
+    }else{eval(substitute(con),dataf)}
+  #Here we cannot use ifelse() for it only return vector length of 1
+  if(!missing(select)){
+    select=ifelse(is.numeric(substitute(select)),select,deparse(substitute(select)))
+    return(dataf[judge & !is.na(judge),select,drop=F])
+  }else{
+    return(dataf[judge & !is.na(judge),,drop=F])  
+  }
 }
+##But this doesn work if subset(test,,-x)
+select <- function(df, vars) {
+  vars <- substitute(vars)
+  var_pos <- setNames(as.list(seq_along(df)), names(df))
+  pos <- eval(vars, var_pos)
+###turn character or number to related col number
+  df[, pos, drop = FALSE]
+}
+select(mtcars, -cyl)
+
+
 
 ```
 
