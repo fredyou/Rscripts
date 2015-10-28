@@ -124,7 +124,7 @@ genericFuncs=Filter(checkgeneric,baseobj)
 methodcount=sapply(genericFuncs,function(x){length(methods(x))})
 which(methodcount==max(methodcount))
 
-#6Internal generics don¡¯t dispatch on the implicit class of base types. 
+#6Internal generics donâ€™t dispatch on the implicit class of base types. 
 #so functions with no $class attribute will not be dispatched internal methods
 
 ############
@@ -138,7 +138,7 @@ which(methodcount==max(methodcount))
 # 
 # There is a special operator, @, for extracting slots (aka fields) from an S4 object.
 
-# All S4 related code is stored in the methods package. This package is always available when you¡¯re running R interactively, but may not be available when running R in batch mode. For this reason, it¡¯s a good idea to include an explicit library(methods) whenever you¡¯re using S4.
+# All S4 related code is stored in the methods package. This package is always available when youâ€™re running R interactively, but may not be available when running R in batch mode. For this reason, itâ€™s a good idea to include an explicit library(methods) whenever youâ€™re using S4.
 
 
 y <- c(26, 17, 13, 12, 20, 5, 9, 8, 5, 4, 8)
@@ -296,7 +296,7 @@ count=sapply(
   function(x){ length(showMethods(class=x,printTo=F)[ grep("Function",showMethods(class="RangedNumeric", printTo =FALSE ))])})
 which(count==max(count)) 
 
-###Exercise2 What happens if you define a new S4 class that doesn¡¯t ¡°contain¡± an existing class? (Hint: read about virtual classes in ?Classes.)
+###Exercise2 What happens if you define a new S4 class that doesnâ€™t â€œcontainâ€ an existing class? (Hint: read about virtual classes in ?Classes.)
 setClass("Person") OR #setClass("Person",slots...,contains="VIRTUAL")
 #cannot use new() to create objects but could be extended by subclass
 
@@ -771,11 +771,11 @@ as.environment(x) #list could be a different env from global
 ###Case Study###
 ################
 midpoint <- function(f, a, b) {
-  (b - a) * f((a + b) / 2) #¾ØĞÎÃæ»ı
+  (b - a) * f((a + b) / 2) #çŸ©å½¢é¢ç§¯
 }
 
 trapezoid <- function(f, a, b) {
-  (b - a) / 2 * (f(a) + f(b)) #ÌİĞÎÃæ»ı
+  (b - a) / 2 * (f(a) + f(b)) #æ¢¯å½¢é¢ç§¯
 }
 
 midpoint(sin, 0, pi)
@@ -785,7 +785,7 @@ trapezoid(sin, 0, pi)
 
 ###Above shows the approximation of area is not accurate enough
 ###So lets break up the range into smaller pieces
-### composite integration. I¡¯ll implement it using two new functions:
+### composite integration. Iâ€™ll implement it using two new functions:
 
 midpoint_composite <- function(f, a, b, n = 10) {
   points <- seq(a, b, length = n + 1)
@@ -863,7 +863,7 @@ milne <- newton_cotes(c(2, -1, 2), open = TRUE)
 composite(sin, 0, pi, n = 10, rule = milne)
 
 rules=list(boole,milne,midpoint,trapezoid,simpson)
-#Exercise 2: The trade-off between integration rules is that more complex rules are slower to compute, but need fewer pieces. For sin() in the range [0, ¦Ğ], determine the number of pieces needed so that each rule will be equally accurate. Illustrate your results with a graph. How do they change for different functions? sin(1 / x^2) is particularly challenging.
+#Exercise 2: The trade-off between integration rules is that more complex rules are slower to compute, but need fewer pieces. For sin() in the range [0, Ï€], determine the number of pieces needed so that each rule will be equally accurate. Illustrate your results with a graph. How do they change for different functions? sin(1 / x^2) is particularly challenging.
 
 ##PAY ATTENTION TO = , <- and -> they are different!!:
 snm=c("asdf","dsf","")
@@ -981,7 +981,7 @@ Map(function(x, w) weighted.mean(x, w, na.rm = TRUE), xs, ws)
 
 ####Mapply
 #Map is equivalent to mapply with simplify=F, and is more recommended
-#mapply has the MoreArgs argument that takes a list of extra arguments that will be supplied, as is, to each call. This breaks R¡¯s usual lazy evaluation semantics, and is inconsistent with other functions.
+#mapply has the MoreArgs argument that takes a list of extra arguments that will be supplied, as is, to each call. This breaks Râ€™s usual lazy evaluation semantics, and is inconsistent with other functions.
 
 #############################
 ##Rolling computations######
@@ -1085,7 +1085,7 @@ sweep() #apply to a matrix by row or col, and func with same length vector itera
     x1 <- sweep(x, 1, apply(x, 1, min), `-`) #
     x2 <- sweep(x1, 1, apply(x1, 1, max), `/`)
 outer(1:3,1:10,"*")
-#outer(ĞĞ, ÁĞ,"*"), ĞĞÔªËØ1ÓëËùÓĞÁĞ½øĞĞ"*" È»ºóĞĞ2....
+#outer(è¡Œ, åˆ—,"*"), è¡Œå…ƒç´ 1ä¸æ‰€æœ‰åˆ—è¿›è¡Œ"*" ç„¶åè¡Œ2....
 
 rapply() #recursively apply function to list elements
 myFun <- function(x){
@@ -1157,7 +1157,7 @@ by(airquality[c("Ozone", "Temp")], airquality$Month, mean, na.rm = TRUE) ##Error
 ##################
 #to make base functionals consistent
 
-###Exercise2: There¡¯s no equivalent to split() + vapply(). Should there be? When would it be useful? Implement one yourself.
+###Exercise2: Thereâ€™s no equivalent to split() + vapply(). Should there be? When would it be useful? Implement one yourself.
 pulse <- round(rnorm(22, 70, 10 / 3)) + rep(c(0, 5), c(10, 12))
 group <- rep(c("A", "B"), c(10, 12))
 data=split(pulse, group)
@@ -1206,7 +1206,7 @@ Reduce(intersect, l)
 # Find() return first element match or last element with right =TRUE
 # Position() return pos as above
 
-###Exercise1: Why isn¡¯t is.na() a predicate function? What base R function is closest to being a predicate version of is.na()?
+###Exercise1: Why isnâ€™t is.na() a predicate function? What base R function is closest to being a predicate version of is.na()?
 #is.na is not a predicate cuz predicate returns a single T or F, is.na could return a vector of T,F
 #anyNA
 
@@ -1237,7 +1237,7 @@ uniroot(sin, c(2,2*pi)) #find first x where sin(x) is 0
 optimise(sin, c(0, 2 * pi),maximum = T) #find x where sin(x) is max
 
 #optimise is widely used for computing ML of things
-#First, we create a function factory that, given a dataset, returns a function that computes the negative log likelihood (NLL) for parameter lambda. In R, it¡¯s common to work with the negative since optimise() defaults to finding the minimum.
+#First, we create a function factory that, given a dataset, returns a function that computes the negative log likelihood (NLL) for parameter lambda. In R, itâ€™s common to work with the negative since optimise() defaults to finding the minimum.
 
 poisson_nll <- function(x) {
   n <- length(x)
@@ -1285,9 +1285,9 @@ mysquaureroot=function(x){
 ####Loops that better left as is#####
 #####################################
 #1. Modifying in place
-#If you need to modify part of an existing data frame, it¡¯s often better to use a for loop. 
+#If you need to modify part of an existing data frame, itâ€™s often better to use a for loop. 
 #2. Recursive relationships
-#It¡¯s hard to convert a for loop into a functional when the relationship between elements is not independent, or is defined recursively.
+#Itâ€™s hard to convert a for loop into a functional when the relationship between elements is not independent, or is defined recursively.
 
 #eliminate while loop
 i <- 0
@@ -1331,7 +1331,7 @@ r_add(NA, na.rm = TRUE)
 r_add(numeric())
 #> NULL
 r_add(1)  #in this con,xs is only length 1 and it still worked .We can tell it`s because of 
-#Reduce(),  If we give Reduce() a length one vector, it doesn¡¯t have anything to reduce, so it just returns the input. If we give it an input of length zero, it always returns NULL. 
+#Reduce(),  If we give Reduce() a length one vector, it doesnâ€™t have anything to reduce, so it just returns the input. If we give it an input of length zero, it always returns NULL. 
 
 ###simply add init arg
 r_add <- function(xs, na.rm = TRUE) {
@@ -1468,7 +1468,7 @@ replicate(500,randomise(sum)) %>%
   data.frame(x = .) %>%
   ggplot(aes(x = x)) + geom_density()
 
-###??Exercise3: How does paste() fit into this structure? What is the scalar binary function that underlies paste()? What are the sep and collapse arguments to paste() equivalent to? Are there any paste variants that don¡¯t have existing R implementations?
+###??Exercise3: How does paste() fit into this structure? What is the scalar binary function that underlies paste()? What are the sep and collapse arguments to paste() equivalent to? Are there any paste variants that donâ€™t have existing R implementations?
 #paste(c(1,3),c(4,1),sep="-",collapse="+") : "1-4+3-1"
 #binary is "+"? 
 #sep is used in a Map function
@@ -1586,7 +1586,7 @@ download <- dot_every(10, memoise(delay_by(1, download_file)))
 ##################################
 ##Capturing function invocations##
 ##################################
-#it can be hard to see what¡¯s going on inside of functionals
+#it can be hard to see whatâ€™s going on inside of functionals
 #we can use FOs to peer behind the curtain with tee()
 ignore <- function(...) NULL
 #use tee , a FO to show what`s going on inside functionals
@@ -1701,7 +1701,7 @@ delay_by <- function(delay, f) {
       time<<-Sys.time()
     }
   }
-} #¿¼ÂÇÈı¸öÂß¼­£ºµÚÒ»´ÎÔËĞĞ£¬ÑÓÎó³¬Ê±ºóµÄÔËĞĞºÍ²»³¬Ê±µÄÔËĞĞ
+} #è€ƒè™‘ä¸‰ä¸ªé€»è¾‘ï¼šç¬¬ä¸€æ¬¡è¿è¡Œï¼Œå»¶è¯¯è¶…æ—¶åçš„è¿è¡Œå’Œä¸è¶…æ—¶çš„è¿è¡Œ
 
 delay_by2 <- function(delay, f)
 {
@@ -1717,41 +1717,41 @@ delay_by2 <- function(delay, f)
     delay_until <<- Sys.time() + delay
     res
   }  
-} #BETTER!!!¿¼ÂÇÁ½¸öÂß¼­ Âú×ãdelayºÍ²»Âú×ãdelay:
-  #Âú×ãdelay: ÒªÑÓ³ÙµÄÊ±¼äĞ¡ÓÚµ±Ç°Ê±¼ä£¨µÚÒ»´ÎÔËĞĞºÍ³¬Ê±ÔËĞĞ£©
-  #²»Âú×ãdelay: ÒªÑÓ³Ùµ½µÄÊ±¼ä´óÓÚµ±Ç°Ê±¼ä,³ÌĞòÍÏÑÓµ½ÑÓ³ÙÊ±¼ä
+} #BETTER!!!è€ƒè™‘ä¸¤ä¸ªé€»è¾‘ æ»¡è¶³delayå’Œä¸æ»¡è¶³delay:
+  #æ»¡è¶³delay: è¦å»¶è¿Ÿçš„æ—¶é—´å°äºå½“å‰æ—¶é—´ï¼ˆç¬¬ä¸€æ¬¡è¿è¡Œå’Œè¶…æ—¶è¿è¡Œï¼‰
+  #ä¸æ»¡è¶³delay: è¦å»¶è¿Ÿåˆ°çš„æ—¶é—´å¤§äºå½“å‰æ—¶é—´,ç¨‹åºæ‹–å»¶åˆ°å»¶è¿Ÿæ—¶é—´
 
 delay_by3 <- function(delay, f)
 {
   executime <- 0
-  #Èç¹û»»³É<-Sys.time(),Ö´ĞĞÊ±¼ä¾Í²»¶ÔÁË,ÒòÎªµÚÒ»´ÎÖ´ĞĞ²¢²»ÊÇSys.time
-  #µÃµ½¾­Ñé:ÊıÖµ,Ê±¼äµÄ³õÊ¼Öµ×îºÃÊÇ0
+  #å¦‚æœæ¢æˆ<-Sys.time(),æ‰§è¡Œæ—¶é—´å°±ä¸å¯¹äº†,å› ä¸ºç¬¬ä¸€æ¬¡æ‰§è¡Œå¹¶ä¸æ˜¯Sys.time
+  #å¾—åˆ°ç»éªŒ:æ•°å€¼,æ—¶é—´çš„åˆå§‹å€¼æœ€å¥½æ˜¯0
   function(...)
   {
     if(Sys.time()-executime < delay) {
       print(delay-(Sys.time()-executime))
       Sys.sleep(delay-(Sys.time()-executime))
-    }#¾àÀëÉÏ´ÎcallÊ±¼äÔÚdelayÄÚ,Ôòdelay
+    }#è·ç¦»ä¸Šæ¬¡callæ—¶é—´åœ¨delayå†…,åˆ™delay
     res <- f(...)
     executime <<- Sys.time()
     res
   }  
-}#µ«ÊÇ×¢ÒâSys.time()-executime < delay ->Sys.time()< delay+executime
- #ÔÚexecutime=0µÄÊ±ºò,Èç¹ûdelay Òì³£´ó,´ó¹ıÏÖÔÚÊ±¼äµÄ»°,»á±ä³ÉTrue
- #µ«Èç¹û±ä»»Ê½×ÓÎªSys.time()-delay<executime,Ôò¿ÉÉè³õÊ¼executimeÎª-inf,Ôò³õÊ¼±Øfalse
+}#ä½†æ˜¯æ³¨æ„Sys.time()-executime < delay ->Sys.time()< delay+executime
+ #åœ¨executime=0çš„æ—¶å€™,å¦‚æœdelay å¼‚å¸¸å¤§,å¤§è¿‡ç°åœ¨æ—¶é—´çš„è¯,ä¼šå˜æˆTrue
+ #ä½†å¦‚æœå˜æ¢å¼å­ä¸ºSys.time()-delay<executime,åˆ™å¯è®¾åˆå§‹executimeä¸º-inf,åˆ™åˆå§‹å¿…false
  #Sys.time()-delay< -(Inf)
- #ÔÚdelay2 funcÖĞdelay_until - Sys.time() > 0 ,ÔÚµÚÒ»´ÎÔËĞĞÊ±ÓÀ²»Îªtrue(Sys.time-Sys.time==0!>0)
+ #åœ¨delay2 funcä¸­delay_until - Sys.time() > 0 ,åœ¨ç¬¬ä¸€æ¬¡è¿è¡Œæ—¶æ°¸ä¸ä¸ºtrue(Sys.time-Sys.time==0!>0)
 delay_by3gai <- function(delay, f)
 {
   executime <- -Inf
-  #Èç¹û»»³É<-Sys.time(),Ö´ĞĞÊ±¼ä¾Í²»¶ÔÁË,ÒòÎªµÚÒ»´ÎÖ´ĞĞ²¢²»ÊÇSys.time
-  #µÃµ½¾­Ñé:ÊıÖµ,Ê±¼äµÄ³õÊ¼Öµ×îºÃÊÇ0
+  #å¦‚æœæ¢æˆ<-Sys.time(),æ‰§è¡Œæ—¶é—´å°±ä¸å¯¹äº†,å› ä¸ºç¬¬ä¸€æ¬¡æ‰§è¡Œå¹¶ä¸æ˜¯Sys.time
+  #å¾—åˆ°ç»éªŒ:æ•°å€¼,æ—¶é—´çš„åˆå§‹å€¼æœ€å¥½æ˜¯0
   function(...)
   {
     if(Sys.time()- delay< executime) {
       print(delay-(Sys.time()-executime))
       Sys.sleep(delay-(Sys.time()-executime))
-    }#¾àÀëÉÏ´ÎcallÊ±¼äÔÚdelayÄÚ,Ôòdelay
+    }#è·ç¦»ä¸Šæ¬¡callæ—¶é—´åœ¨delayå†…,åˆ™delay
     res <- f(...)
     executime <<- Sys.time()
     res
@@ -1760,16 +1760,16 @@ delay_by3gai <- function(delay, f)
 
 f=function(){print("Executed once");print(Sys.time());return(NULL)}
 g<-delay_by(1,f);g();Sys.sleep(2);g()
-#####Note: if ÖĞµÄcondition ²»µÈÊ½×óÓÒ»»Î»¿ÉÓĞ´ó²»Í¬.
-#ÈçºÎÍÆµ¼delay_until - Sys.time() > 0Õâ¸öÌõ¼ş?
-########## ¿¼ÂÇÁ½¸ö¶¯Ì¬±ä»¯µÄÊ±¼äµã(Êı¾İ)Ê±,×îºÃ»­Á½ÌõÏß
+#####Note: if ä¸­çš„condition ä¸ç­‰å¼å·¦å³æ¢ä½å¯æœ‰å¤§ä¸åŒ.
+#å¦‚ä½•æ¨å¯¼delay_until - Sys.time() > 0è¿™ä¸ªæ¡ä»¶?
+########## è€ƒè™‘ä¸¤ä¸ªåŠ¨æ€å˜åŒ–çš„æ—¶é—´ç‚¹(æ•°æ®)æ—¶,æœ€å¥½ç”»ä¸¤æ¡çº¿
 #   establish    call      call2
 # -----*-----------*--*----*---
 #                  *----*
 #       {         }{delay}
-#{}{delay}µÄ³¤¶È×î³¤,µÚÒ»´ÎcallÊ±establishµÄÊ±¼ä¶ÌÓÚ»òµÈÓÚcallµÄÊ±¼ä:time<-Sys.time;funciton(){if(time<=sys.time).... Ò²¼´time <=sys.time
-#µÚ¶ş´ÎcallµÄÊ±ºòcall2µÄsystem.time>=call1time+delay,Ò²¼´call1time+delay<=sys.time
-#ÕâÑùµÄ»°establish time¾ÍÓ¦¸Ã°´ÕÕcalltime+delayÀ´È¡Ãû,µÚÒ»´Îestablish timeÎªsys.time of FO ,callÖ®ºóÎªsys.time of closure+delay
+#{}{delay}çš„é•¿åº¦æœ€é•¿,ç¬¬ä¸€æ¬¡callæ—¶establishçš„æ—¶é—´çŸ­äºæˆ–ç­‰äºcallçš„æ—¶é—´:time<-Sys.time;funciton(){if(time<=sys.time).... ä¹Ÿå³time <=sys.time
+#ç¬¬äºŒæ¬¡callçš„æ—¶å€™call2çš„system.time>=call1time+delay,ä¹Ÿå³call1time+delay<=sys.time
+#è¿™æ ·çš„è¯establish timeå°±åº”è¯¥æŒ‰ç…§calltime+delayæ¥å–å,ç¬¬ä¸€æ¬¡establish timeä¸ºsys.time of FO ,callä¹‹åä¸ºsys.time of closure+delay
 
 ###Exercies5: There are three places we could have added a memoise call: why did we choose the one we did?
 delay_by <- function(delay, f) {
@@ -1984,7 +1984,7 @@ track2 <- function(f)
 ##Input FOs##
 #############
 ###IN MINOR WAY: partial function variant
-#It is a function that has certain arguments ¡°filled in¡± already. This is called ¡°partial function application¡±, and is implemented by pryr::partial().
+#It is a function that has certain arguments â€œfilled inâ€ already. This is called â€œpartial function applicationâ€, and is implemented by pryr::partial().
 
 f <- function(a) g(a, b = 1)
 #replaced with:
@@ -2043,7 +2043,7 @@ download2=partial(lapply,FUN=download) #NOTE!! Here we must have "FUN=download"!
 #Anwser, I think the pros of partial is it clearly shows what function it is partial from
 #But, it makes it less flexible in manipulating args of a closure.
 
-###Exercise2: Read the source code for plyr::colwise(). How does the code work? What are colwise()¡¯s three main tasks? How could you make colwise() simpler by implementing each task as a function operator? (Hint: think about partial().)
+###Exercise2: Read the source code for plyr::colwise(). How does the code work? What are colwise()â€™s three main tasks? How could you make colwise() simpler by implementing each task as a function operator? (Hint: think about partial().)
 function (.fun, .cols = true, ...) 
 {
     if (!is.function(.cols)) {
@@ -2073,7 +2073,7 @@ function (.fun, .cols = true, ...)
 # A data frame is returned.
 ###To simplify, the filter function could be partial() ed
 
-###Exercise4: You¡¯ve seen five functions that modify a function to change its output from one form to another. What are they? Draw a table of the various combinations of types of outputs: what should go in the rows and what should go in the columns? What function operators might you want to write to fill in the missing cells? Come up with example use cases.
+###Exercise4: Youâ€™ve seen five functions that modify a function to change its output from one form to another. What are they? Draw a table of the various combinations of types of outputs: what should go in the rows and what should go in the columns? What function operators might you want to write to fill in the missing cells? Come up with example use cases.
 ###Answer:
 #               scalar	     vector	      matrix	     data frame	   arg1, arg2, ...	list(args)
 # scalar						
@@ -2109,8 +2109,8 @@ deviation <- function(x) x - mean(x)
 sd2 <- sqrt %o% mean %o% square %o% deviation #right most is the inner most
 sd2(1:10)
 ###This type of programming is called tacit or point-free programming
-### In this style of programming, you don¡¯t explicitly refer to variables. Instead, you focus on the high-level composition of functions rather than the low-level flow of data. The focus is on what¡¯s being done, not on objects it¡¯s being done to. Since we¡¯re using only functions and not parameters, we use verbs and not nouns. This style is common in Haskell
-###compose() is particularly useful in conjunction with partial(), because partial() allows you to supply additional arguments to the functions being composed. One nice side effect of this style of programming is that it keeps a function¡¯s arguments near its name.
+### In this style of programming, you donâ€™t explicitly refer to variables. Instead, you focus on the high-level composition of functions rather than the low-level flow of data. The focus is on whatâ€™s being done, not on objects itâ€™s being done to. Since weâ€™re using only functions and not parameters, we use verbs and not nouns. This style is common in Haskell
+###compose() is particularly useful in conjunction with partial(), because partial() allows you to supply additional arguments to the functions being composed. One nice side effect of this style of programming is that it keeps a functionâ€™s arguments near its name.
 
 ##rewrite download with compose style
 download <- dot_every(10, memoise(delay_by(1, download_file)))
@@ -2159,7 +2159,7 @@ chrOrnum=myOr(is.character,is.numeric)
 chrOrnum(TRUE)
 chrOrnum(1)
 
-###Exercise3:Implement the xor() binary operator. Implement it using the existing xor() function. Implement it as a combination of and() and or(). What are the advantages and disadvantages of each approach? Also think about what you¡¯ll call the resulting function to avoid a clash with the existing xor() function, and how you might change the names of and(), not(), and or() to keep them consistent.
+###Exercise3:Implement the xor() binary operator. Implement it using the existing xor() function. Implement it as a combination of and() and or(). What are the advantages and disadvantages of each approach? Also think about what youâ€™ll call the resulting function to avoid a clash with the existing xor() function, and how you might change the names of and(), not(), and or() to keep them consistent.
 and <- function(f1, f2) {
   force(f1); force(f2)
   function(...) {
@@ -2180,7 +2180,109 @@ or <- function(f1, f2) {
 TRUE %xor% FALSE
 
 ###Exercise4:Above, we implemented boolean algebra for functions that return a logical function. Implement elementary algebra (plus(), minus(), multiply(), divide(), exponentiate(), log()) for functions that return numeric vectors.
+maker=function(f){
+  function(x,y){
+    f(x,y)
+  }
+}
+plus=maker(`+`)
+plus(1,2)
+```
 
+Non-Standard Evaluation
+```{r non-standard evaluation}
+####################################
+###Substitute paired with deparse###
+####################################
+# function arguments are represented by a special type of object called a "promise"
+#substitute: promise->expression ; deparse: expression->character
+g <- function(x) deparse(substitute(x))
+
+# Basic use of this idea: avoid quotes
+library(ggplot2)
+# the same as
+library("ggplot2")
+g(1:10)
+
+###Exercise1:One important feature of deparse() to be aware of when programming is that it can return multiple strings if the input is too long. For example, the following call produces a vector of length two:
+g=function(...){deparse(substitute(...),nlines=1L)}
+g(a + b + c + d + e + f + g + h + i + j + k + l + m +
+  n + o + p + q + r + s + t + u + v + w + x + y + z)
+###Why does this happen? Carefully read the documentation for ?deparse. Can you write a wrapper around deparse() so that it always returns a single string?
+
+###Exercise4:f(), defined above, just calls substitute(). Why canâ€™t we use it to define g()? In other words, what will the following code return? First make a prediction. Then run the code and think about the results.
+f <- function(x) substitute(x)
+g <- function(x) deparse(f(x))
+g(1:10) #x not evaluated because f(x) did not evaluate it
+g(x)
+g(x + y ^ 2 / z + exp(a * sin(b)))
+###Answer: the substitute function takes promise as input ,f(1)=>1,
+###Howerver,in the call f(x),the promise is x
+###In other words, substitute will never evaluate the promise
+
+################################
+###special in subset func:NSE###
+################################
+#subset() is special because it implements different scoping rules: the expressions a >= 4 or b == c are evaluated in the specified data frame rather than in the current or global environments
+
+###quote:  captures an unevaluated expression like substitute(), but doesnâ€™t do any of the advanced transformations that can make substitute() confusing
+###quote() and eval() are opposites. In the example below, each eval() peels off one layer of quote()â€™s
+
+####Difference between quote and substitute!!!:
+#diff1: 
+quote(quote(2 + 2))
+#> quote(2 + 2)
+eval(quote(quote(2 + 2)))
+eval(eval(quote(quote(2 + 2))))
+
+substitute(substitute(2+2))
+eval(substitute(substitute(2+2)))
+#> 2+2
+
+#diff2:
+test2=function(...){quote(...)}
+test2(asdfa) # ...
+test2=function(...){substitute(...)}
+test2(asdf)  #asdf
+#substitute takes promises as expression
+#while quote takes arguments as what it is.
+
+###eval second argument need not be limited to an environment: it can also be a list or a data frame.
+#Useful ways of eval
+eval(quote(x), data.frame(x = 40))
+eval(quote(a >= 4), sample_df)
+
+#Common mistakes with eval
+eval(quote(a), sample_df)
+#> [1] 1 2 3 4 5
+eval(a, sample_df)
+#> Error in eval(a, sample_df): object 'a' not found
+
+#Use eval and quote to write subset2
+subset2=function(df,con){
+  judge=eval(substitute(con),df)
+  return(df[judge & !is.na(judge),,drop=F])
+}
+
+###Exercise1: Predict the results of the following lines of code:
+quote(eval(quote(eval(quote(eval(quote(2 + 2)))))))
+#!!formost is quote! so everything after it is the result
+
+###Exercise2: subset2() has a bug if you use it with a single column data frame. What should the following code return? How can you modify subset2() so it returns the correct type of object?
+sample_df2 <- data.frame(x = 1:10)
+subset2(sample_df2, x > 8)
+#add drop=F: df[,,drop=F]
+
+###Exercise3: The real subset function (subset.data.frame()) removes missing values in the condition. Modify subset2() to do the same: drop the offending rows.
+###Answer:see changes above "judge & !is.na(judge)"
+
+###Exercise5: The second argument in subset(,,select=...) allows you to select variables.How does it work?
+
+subset3=function(df,con,select){
+  judge= ifelse(missing(con),rep(TRUE,dim(df)[1]),eval(substitute(con),df))
+  
+  return(df[judge & !is.na(judge),deparse(substitute(select)),drop=F])
+}
 
 ```
 
