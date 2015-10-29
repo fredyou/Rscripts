@@ -2293,12 +2293,184 @@ subset3=function(dataf,con,select){
 ##But this doesn work if subset(test,,-x)
 select <- function(df, vars) {
   vars <- substitute(vars)
-  var_pos <- setNames(as.list(seq_along(df)), names(df))
+  var_pos <- setNames(as.list(seq_along(df)), names(df)) 
+  ##This is the only correct way to make use of -x, -cyl such expression work.
   pos <- eval(vars, var_pos)
 ###turn character or number to related col number
   df[, pos, drop = FALSE]
 }
 select(mtcars, -cyl)
+
+###Exercise6 : What does evalq() do? Use it to reduce the amount of typing for the examples above that use both eval() and quote().
+###Answer: 
+N <- 3
+env <- new.env()
+assign("N", 27, envir = env)
+## this version changes the visible copy of N only, since the argument
+## passed to eval is '4'.
+eval(N <- 4, env)
+N
+get("N", envir = env)
+## this version does the assignment in env, and changes N only there.
+evalq(N <- 5, env)
+N
+get("N", envir = env)
+###So evalq change data within the envir
+# 4
+eval(quote(eval(quote(eval(quote(2 + 2))))))
+evalq(evalq(evalq(2+2)))
+
+# 4
+eval(eval(quote(eval(quote(eval(quote(2 + 2)))))))
+eval(evalq(evalq(evalq(2+2))))
+
+# should be eval(quote(eval(quote(eval(quote(2 + 2))))))
+# in this case, evalq cannot be used.
+quote(eval(quote(eval(quote(eval(quote(2 + 2)))))))
+
+####################
+###Scoping issues###
+####################
+sample_df <- data.frame(a = 1:5, b = 5:1, c = c(5, 3, 1, 4, 1))
+select <- function(df, vars) {
+  vars <- substitute(vars)
+  var_pos <- setNames(as.list(seq_along(df)), names(df))
+  pos <- eval(vars, var_pos)
+  df[, pos, drop = FALSE]
+}
+subset2 <- function(x, condition,select) {
+  condition_call <- substitute(condition)
+  r <- eval(condition_call, x)
+  if(missing(select)){
+    return(x[r, ,drop=F])  
+  }else{
+    select(x[r,,drop=F],select)
+  }
+  
+}
+subset2(sample_df, a == 4) #workded
+x=4;y=4
+subset2(sample_df, a == x) 
+#not worked!! And here x is being replaced with dataframe in subset2 <- function(x, condition,select)
+subset2(sample_df, a == condition)
+#> Error in eval(expr, envir, enclos): object 'a' not found
+subset2(sample_df, a == condition_call)
+###These above all do not work because the x,condition,condition_call are names inside subset2
+###It didn t look up in the parent.frame rather fetch the value inside subset enclose
+###The way to make it right is to tell R to look for value in global
+subset2(sample_df, a == y) #worked!!
+
+###So There`s scoping issues
+#The key is the third argument to eval(,,enclose): enclos. This allows us to specify a parent (or enclosing) environment for objects that don¡¯t have one (like lists and data frames)
+#enclos is ignored if env is a real environment.
+#So basically we should look for x in the env subset2 is called, which is parent.frame() inside subset.
+subset2 <- function(x, condition,select) {
+  condition_call <- substitute(condition)
+  r <- eval(condition_call, x,parent.frame())
+  if(missing(select)){
+    return(x[r, ,drop=F])  
+  }else{
+    select(x[r,,drop=F],select)
+  }
+  
+}
+subset2(sample_df, a == x) #worked!!
+subset2(sample_df, a == y) #worked!!
+
+###Or use list2env(,parent=parent.frame()) to create a env that is child of parent.frame, rather the subset2`s enclosing env.
+###Note: list2env(list,envir=...) will export list to env: ...
+
+###Exercise1: plyr::arrange() works similarly to subset(), but instead of selecting rows, it reorders them. How does it work? What does substitute(order(...)) do? Create a function that does only that and experiment with it.
+###Answer: substitute(order(...)) will convert promises first and turn order(promises) to expression
+
+###Exercise2: What does transform() do? Read the documentation. How does it work? Read the source code for transform.data.frame(). What does substitute(list(...)) do?
+###Answer: change old cols of dataframe or compute to create new cols
+###        substitute(list(...)) :get expression of list(col1,col2)
+
+###Exercise3: plyr::mutate() is similar to transform() but it applies the transformations sequentially so that transformation can refer to columns that were just created:
+df <- data.frame(x = 1:5)
+transform(df, x2 = x * x, x3 = x2 * x)  ##here in x3 = x2 *x , the x2 is not found
+plyr::mutate(df, x2 = x * x, x3 = x2 * x)
+###How does mutate work? What¡¯s the key difference between mutate() and transform()?
+mutate=function (.data, ...) 
+{
+    stopifnot(is.data.frame(.data) || is.list(.data) || is.environment(.data))
+    cols <- as.list(substitute(list(...))[-1]) # -1 to remove "list" that result from substitute
+                                              # This is to get ... names as a list called: cols
+    cols <- cols[names(cols) != ""]
+    for (col in names(cols)) {
+        .data[[col]] <- eval(cols[[col]], .data, parent.frame())
+    }
+    .data
+}
+###Note!!! very useful: as.list(substitute(list(...))), convert promises of xxx=xxx,.. to a list
+
+###Compare eval in transform and mutate:
+##transform: e <- eval(substitute(list(...)), `_data`, parent.frame())
+test=function(...){eval(substitute(list(...)),sample_df,parent.frame())}
+test(a=-a,b,c) #get a list of a,b,c cols in sample_df
+
+##mutate: .data[[col]] <- eval(cols[[col]], .data, parent.frame()) ;col is each colname
+test=function(.data,...){
+  cols <- as.list(substitute(list(...))[-1]) #as.list to avoid evaluation
+  print(cols)
+  print(class(cols[[1]]))
+  eval(cols[[ names(cols)[1] ]], .data, parent.frame())
+}
+test(sample_df,x2 = x * x, x3 = x2 * x)
+#Here cols[[ names(cols)[1] ]] is the equation call (not character) stored in the named list of promises
+#Then eval(call,.data,parent.frame())
+
+####Exercise4: What does with() do? How does it work? Read the source code for with.default(). What does within() do? How does it work? Read the source code for within.data.frame(). Why is the code so much more complex than with()?
+with.default=function (data, expr, ...) {
+  eval(substitute(expr), data, enclos = parent.frame())
+}
+within.data.frame=function (data, expr, ...) 
+{
+    parent <- parent.frame()
+    e <- evalq(environment(), data, parent) #convert data to a list like environment
+    eval(substitute(expr), e)
+    l <- as.list(e)
+    l <- l[!vapply(l, is.null, NA, USE.NAMES = FALSE)]
+    nD <- length(del <- setdiff(names(data), (nl <- names(l))))
+    data[nl] <- l
+    if (nD) 
+        data[del] <- if (nD == 1) 
+            NULL
+        else vector("list", nD)
+    data
+}
+
+with.default(sample_df,a-100) # not return whole sample_df,not copying sample_df,just calculate and return
+within.data.frame(sample_df,a=a-100) # "=" is not allowed
+e=new.env()
+e$a="dfsadf"
+eval(substitute(a=11),e) #only if '=' is replaced with <- ,it would work
+eval(substitute(a<-11),e) #e$a is 11, only if e is envir will this make real change
+#So
+within.data.frame(sample_df,a<-a-100) #worked: dataframe is converted to a new copy of envir first
+                                      #Then eval(expr,real_env) will change value in real_env
+
+###################################
+###Calling from another function###
+###################################
+#i.e.
+subset2 <- function(x, condition) {
+  condition_call <- substitute(condition)
+  r <- eval(condition_call, x, parent.frame())
+  x[r, ]
+}
+
+scramble <- function(x) x[sample(nrow(x)), ]
+
+subscramble <- function(x, condition) {
+  scramble(subset2(x, condition))
+}
+
+##But it doesnt work:
+subscramble(sample_df, a >= 4)
+# Error in eval(expr, envir, enclos) : object 'a' not found
+# Because the substitute in subset2 will not recognize indirect promises 
 
 
 
