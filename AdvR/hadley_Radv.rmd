@@ -2471,7 +2471,113 @@ subscramble <- function(x, condition) {
 subscramble(sample_df, a >= 4)
 # Error in eval(expr, envir, enclos) : object 'a' not found
 # Because the substitute in subset2 will not recognize indirect promises 
+# In summary, substitute only fetch the nearest promises at hand.
 
+##What about set a as global variable?
+a<-4
+subscramble(sample_df, a == 4)
+#>   a b c
+#> 1 1 5 5
+#> 2 2 4 3
+#> 4 4 2 4
+#> 5 5 1 1
+#> 3 3 3 1
+
+###The way to solve it is only to write an alternative version of the function that uses standard evaluation.
+###这里可以将subset2改为接收substitute(condition)为参数，而不是在subset2里再substitute
+sample_df <- data.frame(a = 1:5, b = 5:1, c = c(5, 3, 1, 4, 1))
+subset2_q<-function(df,con){
+  r<-eval(con,df,parent.frame()) #to get what con really is ,envir should be parent call
+  df[r,]
+}
+subset2 <- function(x, condition) {
+  subset2_q(x, substitute(condition))
+}
+
+subscramble <- function(x, condition) {
+  condition <- substitute(condition)
+  scramble(subset2_q(x, condition))
+}
+
+##this subset2_q is kinda like escape hatch
+##Base R functions tend to use a different sort of escape hatch. They often have an argument that turns off NSE. For example, require() has character.only = TRUE.
+##But this may make function calls harder to understand
+
+##Another way of subscramble:
+capCon<-function(con){
+  substitute(con)
+}
+subset2_q<-function(df,con){
+  r<-eval(con,df,parent.frame()) #to get what con really is ,envir should be parent call
+  df[r,]
+}
+subscramble <- function(x, condition) {
+  scramble(subset2_q(x, capCon(condition)))
+}
+subscramble(sample_df, a >= 4)
+#NOT WORKING!!!
+
+###Exercise1: The following R functions all use NSE. For each, describe how it uses NSE, and read the documentation to determine its escape hatch.
+# rm()  
+# library() and require()
+# substitute()
+# data()
+# data.frame()
+###Answer: rm: Use dots <- match.call(expand.dots = FALSE)$... to  capture ... as a list
+###            escape hatch: convert all names or character to character by names <- vapply(dots, as.character, "")
+###require&library:  Use if (!character.only) package <- as.character(substitute(package)) to convert
+###     substitute: escape hatch:quote?
+###     data():  as.character(substitute(list(...))[-1L]) to capture only name of ...
+###   data.frame(): same as above
+
+###Exercise2: Base functions match.fun(), page(), and ls() all try to automatically determine whether you want standard or non-standard evaluation. Each uses a different approach. Figure out the essence of each approach then compare and contrast
+###Answer: match.fun tests to see if the FUN argument is a function or character, then decides whether to use standard or non-standard evaluation.
+###page does something similar. if (is.character(x) && length(x) == 1L){}else{deparse(substitute(x))}
+
+###Exercise3: Add an escape hatch to plyr::mutate() by splitting it into two functions. One function should capture the unevaluated inputs. The other should take a data frame and list of expressions and perform the computation.
+#Note mutate must use a=a+c not a<-a+c symbol
+#This is cuz   cols <- as.list(substitute(list(a<-a-1))[-1]) 会变成没有名字的值为a<-a-1的list
+#             而as.list(substitute(list(a=-a-1))[-1]) 会变成名字为a的值为a-1的list
+
+# as.list(substitute(list()))会识别里面的等号，将=前面的名字存起来
+mutate=function (.data, ...) 
+{
+    stopifnot(is.data.frame(.data) || is.list(.data) || is.environment(.data))
+    cols <- as.list(substitute(list(...))[-1])
+    cols <- cols[names(cols) != ""]
+    for (col in names(cols)) {
+        .data[[col]] <- eval(cols[[col]], .data, parent.frame())
+    }
+    .data
+}
+###Answer: Escape hatch: 
+capDots<-function(...){
+  cols <- as.list(substitute(list(...))[-1])
+  cols <- cols[names(cols) != ""]
+  cols
+}
+mutate_p=function(.data,cols){
+  for (col in names(cols)) {
+        .data[[col]] <- eval(cols[[col]], .data, parent.frame())
+    }
+  .data
+}
+mutate=function(.data,...){
+  stopifnot(is.data.frame(.data) || is.list(.data) || is.environment(.data))
+#   cols <- as.list(substitute(list(...))[-1])
+#   cols <- cols[names(cols) != ""]
+  cols=capDots(...)
+  mutate_p(.data,cols)
+}
+
+###??Exercise4: What’s the escape hatch for ggplot2::aes()? What about plyr::()? What do they have in common? What are the advantages and disadvantages of their differences?
+
+
+###Exercise5: The version of subset2_q() I presented is a simplification of real code. Why is the following version better?
+subset2_q <- function(x, cond, env = parent.frame()) {
+  r <- eval(cond, x, env)
+  x[r, ]
+}
 
 
 ```
