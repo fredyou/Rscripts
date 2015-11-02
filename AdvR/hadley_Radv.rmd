@@ -2624,6 +2624,16 @@ mutate=function(.data,...){
 }
 sample_df <- data.frame(a = 1:5, b = 5:1, c = c(5, 3, 1, 4, 1))
 mutate(sample_df,a=a-1)
+###The reason why this work is that the final function mutate use ... as a way to pass condition
+###dots can enable sub functions to capture the con, otherwise:
+capCon=function(con){substitute(con)}
+test=function(cond){capCon(cond)}
+test(a>=3)
+#this resulted in "cond" rather than a>=3, while:
+test=function(...){capCon(...)}
+test(a>=3)
+# a>=3
+
 ###??Exercise4: What’s the escape hatch for ggplot2::aes()? What about plyr::()? What do they have in common? What are the advantages and disadvantages of their differences?
 
 
@@ -2643,6 +2653,147 @@ subset2_q(sample_df,expression(a>=c),env=e)
 e$d=4
 subset2_q(sample_df,expression(a>=d),env=e) 
 ####Answer, this is why add env parameter to subset2_q is useful!
+
+##############
+##substitute##
+##############
+#When run substitute from the global environment, it never does substitutions: in fact, in this situation it behaves just like quote()
+
+##So better use subs() func provided by pryr:
+subs=function (x, env = parent.frame()){
+    if (identical(env, globalenv())) {
+        env <- as.list(env)
+    }
+    substitute_q(substitute(x), env)
+}
+to_env=pryr:::to_env
+substitute_q=function (x, env) 
+{
+    stopifnot(is.language(x))
+    env <- to_env(env)
+    call <- substitute(substitute(x, env), list(x = x))
+   
+    eval(call)
+}
+a=2
+substitute(a) #a
+subs(a) #2
+###The trick is to pass a new env list to substitute and also name: "a" to substitute and
+###Finally get: substitute(a,env) where env is a list same as global
+#First, we do: substitute(x) then pass it to a escape hatch 
+test=function(x){
+  env=as.list(globalenv()) #create a list of globalenv
+  env=env<-pryr:::to_env(env); #convert list back to env
+  escapeHatch(substitute(x), env) #pass substitue(a) and env to escape hatch
+} 
+escapeHatch=function(x,env){
+  # substitute(x,env) :get x cuz no x is found in env
+  # substitute(x) : THIS WOULD ONLY GET substitute(x) cuz 
+  call=substitute(substitute(x, env), list(x = x))
+  # This means substitute the inside "substitute(x,env)" with list(x=x)
+  # This links x to promise x which is name: "a" and this would result in a call like:
+  # Substitute(a,env)
+  eval(call)
+  #Finally we just eval the substitute call
+}
+
+####substitute rules without setting env to substitute####
+###x, y is ordinary value so it’s replaced by the value of the variable( Rule 1).
+x <- quote(mpg)
+y <- quote(disp)
+subs(xyplot(x ~ y, data = mtcars))
+#> xyplot(mpg ~ disp, data = mtcars)
+
+###It’s even simpler inside a function, because we don’t need to explicitly quote the x and y variables (rule 2):a promise (a function argument), it’s replaced by the expression associated with the promise.
+xyplot2 <- function(x, y, data = data) {
+  substitute(xyplot(x ~ y, data = data))
+}
+xyplot2(mpg, disp, data = mtcars)
+#> xyplot(mpg ~ disp, data = mtcars)
+
+###Rule 3: dots will be replaced by the contents of ...
+xyplot3 <- function(x, y, ...) {
+  substitute(xyplot(x ~ y, ...))
+}
+xyplot3(mpg, disp, data = mtcars, col = "red", aspect = "xy")
+#> xyplot(mpg ~ disp, data = mtcars, col = "red", aspect = "xy")
+
+########################################
+##Adding an escape hatch to substitute##
+########################################
+
+
+
+
+#######################################
+###Summary in Nonstandard Evaluation###
+#######################################
+capCon=function(con){substitute(con)}
+outlayer=function(...){capCon(...)}
+outlayer=function(cond){capCon(cond)}
+#1. use a capture function to cap condition as expression is generally a bad idea: 
+#   This would only work when outlayer func using capCon is passing "..." to capCon,
+#   rather than passing cond to capCon
+#
+subset2_q <- function(x, cond, env = parent.frame()) {
+  r <- eval(cond, x, env)
+  x[r, ]
+}
+#2. when a funciton invoke eval to compute, better provide a env parameter for eval enclos=
+#
+test=function(){a=1;substitute(a);};test() #under environment(): 1
+test=function(){a=1;substitute(a,env=parent.frame());};test() #under global env: a
+#3.  When run from the global environment, it never does substitutions: in fact, in this situation it behaves just like quote()
+
+#4: 像a=a-3这样的参数是不可以直接substitute的,必须通过转换为as.list(substitute(list(...)))的方式得到,
+#   而其他如c=4;a>=c, 可以通过以下capCon来捕获a>=4的call: 
+capCon=function(con,env=globalenv()){
+  print("in capcon")
+  if(is.call(con)){
+    print("Is call")
+    #print(con)
+    call=substitute(substitute(con,env),list(con=con));
+    eval(call)  
+  }else{
+    stop("con shall be a call!!")
+  }
+}
+outlayer=function(cond,env=parent.frame()){
+  print("in outlayer")
+  print(cond)
+  capCon(cond,env)
+}
+outoutlayer=function(cond,env=parent.frame()){
+  #con=capCon(substitute(cond),env)
+  #print(con)
+  outlayer(substitute(cond),env)
+}
+e=new.env()
+e$c=3
+outoutlayer(a>=c,e)
+
+#5 而通过直接substitute(x,e) 无法直接获得e 中的变量信息因为他会先看x这个是否在e中:
+test=function(x,e){substitute(x,e)}; #-1 If it (x) is not a bound symbol in env, it is unchanged
+test(a>=c,e) #x 
+e$x=4 #add x symbol to e
+test(a>=c,e) #4, Now since it found x in e, i return 4!!!
+
+test=function(x){substitute(x)} #-2Now x is the promise object, formal argument to a function or explicitly created using delayedAssign()
+test(a>=c) $a>=c #In this turn, the expression slot of the promise replaces the symbol.
+
+test=function(x){substitute(x)} #-3 Now the env is environment(), an ordinary variable will be
+test(a>=c)                      #substituted
+
+test2=function(x,e){capCon(substitute(x),e)};test2(a>=c,e)
+##so the machanism is just as:
+test3=function(x,e){x=substitute(x);eval(substitute(substitute(x,e),list(x=x)))} 
+#this is just like typing, which is what test3 and capCon get at last:
+substitute(a>=c,e)
+
+###In above funcs, test2 is quite like pryr::subs that increased fault tolerances
+
+
+
 
 ```
 
